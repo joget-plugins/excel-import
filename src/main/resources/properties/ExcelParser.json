@@ -1,0 +1,79 @@
+[
+    {
+        "title": "@@PluginClassName.config@@",
+        "properties": [
+            {
+                "name": "id",
+                "label": "ID",
+                "type": "textfield",
+                "required": "True",
+                "regex_validation": "^[a-zA-Z0-9_]+$",
+                "validation_message": "@@PluginClassName.invalidId@@"
+            },
+            {
+                "name": "readonly",
+                "label": "@@PluginClassName.readonly@@",
+                "type": "checkbox",
+                "value": "false",
+                "options": [
+                    {
+                        "value": "true",
+                        "label": ""
+                    }
+                ]
+            },
+            {
+                "name": "showActionsOnReadonly",
+                "label": "@@PluginClassName.showActionsOnReadonly@@",
+                "type": "checkbox",
+                "value": "false",
+                "options": [
+                    {
+                        "value": "true",
+                        "label": ""
+                    }
+                ]
+            },
+            {
+                "name": "datalistUrl",
+                "label": "@@PluginClassName.datalistUrl@@",
+                "type": "textfield",
+                "required": "True"
+            },
+            {
+                "name": "parameters",
+                "label": "@@PluginClassName.parameters@@",
+                "type": "grid",
+                "columns": [
+                    {
+                        "key": "paramName",
+                        "label": "@@PluginClassName.paramName@@",
+                        "required": "True"
+                    },
+                    {
+                        "key": "paramValue",
+                        "label": "@@PluginClassName.paramValue@@",
+                        "required": "True"
+                    },
+                    {
+                        "key": "paramSecondValue",
+                        "label": "@@PluginClassName.paramSecondValue@@",
+                        "description": "@@PluginClassName.paramSecondValueDescription@@"
+                    }
+                ]
+            },
+            {
+                "name": "blurOverlay",
+                "label": "@@PluginClassName.blurOverlay@@",
+                "type": "checkbox",
+                "value": "true",
+                "options": [
+                    {
+                        "value": "true",
+                        "label": ""
+                    }
+                ]
+            }
+        ]
+    }
+]
