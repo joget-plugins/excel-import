@@ -1,6 +1,6 @@
 [
     {
-        "title": "@@PluginClassName.config@@",
+        "title": "@@ExcelParser.config@@",
         "properties": [
             {
                 "name": "id",
@@ -8,13 +8,19 @@
                 "type": "textfield",
                 "required": "True",
                 "regex_validation": "^[a-zA-Z0-9_]+$",
-                "validation_message": "@@PluginClassName.invalidId@@"
+                "validation_message": "@@ExcelParser.invalidId@@"
             },
             {
-                "name": "readonly",
-                "label": "@@PluginClassName.readonly@@",
+                "name": "label",
+                "label": "@@ExcelParser.label@@",
+                "type": "textfield"
+            },
+            {
+                "name": "required",
+                "label": "@@ExcelParser.required@@",
+                "description": "@@ExcelParser.requiredDesc@@",
                 "type": "checkbox",
-                "value": "false",
+                "value": "",
                 "options": [
                     {
                         "value": "true",
@@ -23,48 +29,122 @@
                 ]
             },
             {
-                "name": "showActionsOnReadonly",
-                "label": "@@PluginClassName.showActionsOnReadonly@@",
-                "type": "checkbox",
-                "value": "false",
-                "options": [
-                    {
-                        "value": "true",
-                        "label": ""
-                    }
-                ]
-            },
-            {
-                "name": "datalistUrl",
-                "label": "@@PluginClassName.datalistUrl@@",
-                "type": "textfield",
-                "required": "True"
-            },
-            {
-                "name": "parameters",
-                "label": "@@PluginClassName.parameters@@",
+                "name": "columns",
+                "label": "@@ExcelParser.columns@@",
+                "description": "@@ExcelParser.columnsDesc@@",
                 "type": "grid",
                 "columns": [
                     {
-                        "key": "paramName",
-                        "label": "@@PluginClassName.paramName@@",
+                        "key": "excelHeader",
+                        "label": "@@ExcelParser.col.excelHeader@@",
                         "required": "True"
                     },
                     {
-                        "key": "paramValue",
-                        "label": "@@PluginClassName.paramValue@@",
+                        "key": "fieldId",
+                        "label": "@@ExcelParser.col.fieldId@@",
                         "required": "True"
                     },
                     {
-                        "key": "paramSecondValue",
-                        "label": "@@PluginClassName.paramSecondValue@@",
-                        "description": "@@PluginClassName.paramSecondValueDescription@@"
+                        "key": "required",
+                        "label": "@@ExcelParser.col.required@@",
+                        "options": [
+                            { "value": "", "label": "@@ExcelParser.no@@" },
+                            { "value": "true", "label": "@@ExcelParser.yes@@" }
+                        ]
+                    },
+                    {
+                        "key": "uniqueKey",
+                        "label": "@@ExcelParser.col.uniqueKey@@",
+                        "options": [
+                            { "value": "", "label": "@@ExcelParser.no@@" },
+                            { "value": "true", "label": "@@ExcelParser.yes@@" }
+                        ]
                     }
                 ]
             },
             {
-                "name": "blurOverlay",
-                "label": "@@PluginClassName.blurOverlay@@",
+                "name": "caseSensitiveHeaders",
+                "label": "@@ExcelParser.caseSensitiveHeaders@@",
+                "description": "@@ExcelParser.caseSensitiveHeadersDesc@@",
+                "type": "checkbox",
+                "value": "",
+                "options": [
+                    {
+                        "value": "true",
+                        "label": ""
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "title": "@@ExcelParser.storage@@",
+        "properties": [
+            {
+                "name": "customStorageTarget",
+                "label": "@@ExcelParser.customStorageTarget@@",
+                "description": "@@ExcelParser.customStorageTargetDesc@@",
+                "type": "checkbox",
+                "value": "",
+                "options": [
+                    {
+                        "value": "true",
+                        "label": ""
+                    }
+                ]
+            },
+            {
+                "name": "cibleType",
+                "label": "@@ExcelParser.cibleType@@",
+                "description": "@@ExcelParser.cibleTypeDesc@@",
+                "type": "selectbox",
+                "value": "",
+                "options": [
+                    { "value": "", "label": "" },
+                    { "value": "form", "label": "@@ExcelParser.cibleType.form@@" },
+                    { "value": "table", "label": "@@ExcelParser.cibleType.table@@" }
+                ],
+                "control_field": "customStorageTarget",
+                "control_value": "true",
+                "control_use_regex": "false"
+            },
+            {
+                "name": "formDefId",
+                "label": "@@ExcelParser.targetForm@@",
+                "description": "@@ExcelParser.targetFormDesc@@",
+                "type": "selectbox",
+                "options_ajax": "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/forms/options",
+                "control_field": "cibleType",
+                "control_value": "form",
+                "control_use_regex": "false"
+            },
+            {
+                "name": "tableName",
+                "label": "@@ExcelParser.tableName@@",
+                "description": "@@ExcelParser.tableNameDesc@@",
+                "type": "textfield",
+                "control_field": "cibleType",
+                "control_value": "table",
+                "control_use_regex": "false"
+            },
+            {
+                "name": "parentColumnName",
+                "label": "@@ExcelParser.parentColumnName@@",
+                "description": "@@ExcelParser.parentColumnNameDesc@@",
+                "type": "textfield",
+                "value": ""
+            },
+            {
+                "name": "parentColumnValue",
+                "label": "@@ExcelParser.parentColumnValue@@",
+                "description": "@@ExcelParser.parentColumnValueDesc@@",
+                "type": "textfield",
+                "value": ""
+            },
+            {
+                "name": "deleteExisting",
+                "label": "@@ExcelParser.deleteExisting@@",
+                "description": "@@ExcelParser.deleteExistingDesc@@",
                 "type": "checkbox",
                 "value": "true",
                 "options": [
@@ -73,6 +153,62 @@
                         "label": ""
                     }
                 ]
+            },
+            {
+                "name": "replaceStrategy",
+                "label": "@@ExcelParser.replaceStrategy@@",
+                "description": "@@ExcelParser.replaceStrategyDesc@@",
+                "type": "selectbox",
+                "value": "parentId",
+                "options": [
+                    { "value": "parentId", "label": "@@ExcelParser.replaceStrategy.parentId@@" },
+                    { "value": "uniqueKeys", "label": "@@ExcelParser.replaceStrategy.uniqueKeys@@" }
+                ],
+                "control_field": "deleteExisting",
+                "control_value": "true",
+                "control_use_regex": "false"
+            },
+            {
+                "name": "checkExistingDuplicates",
+                "label": "@@ExcelParser.checkExistingDuplicates@@",
+                "description": "@@ExcelParser.checkExistingDuplicatesDesc@@",
+                "type": "checkbox",
+                "value": "",
+                "options": [
+                    {
+                        "value": "true",
+                        "label": ""
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "title": "@@ExcelParser.uiOptions@@",
+        "properties": [
+            {
+                "name": "acceptedFiles",
+                "label": "@@ExcelParser.acceptedFiles@@",
+                "type": "textfield",
+                "value": ".xlsx,.xls"
+            },
+            {
+                "name": "maxFileSizeMB",
+                "label": "@@ExcelParser.maxFileSizeMB@@",
+                "type": "textfield",
+                "value": "5"
+            },
+            {
+                "name": "previewHeight",
+                "label": "@@ExcelParser.previewHeight@@",
+                "type": "textfield",
+                "value": "400"
+            },
+            {
+                "name": "dropzoneText",
+                "label": "@@ExcelParser.dropzoneText@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.dropzoneTextDefault@@"
             }
         ]
     }
