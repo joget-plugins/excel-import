@@ -1,11 +1,6 @@
-<#if element.properties.fullWidth! == 'true'>
-<style>
-    .form-cell.excel-import-fullwidth > label{
-        flex: 0 0 100% !important;
-        width:100%;
-    }
-</style>
-</#if>
+<#assign base = "${request.contextPath}/plugin/org.joget.plugin.melkart.ExcelParser/">
+<link rel="stylesheet" type="text/css" href="${base}css/excel-import.css" />
+
 <div class="form-cell<#if element.properties.fullWidth! == 'true'> excel-import-fullwidth</#if>" ${elementMetaData!}>
     <#if element.properties.label?? && element.properties.label?has_content>
         <label class="label" field-tooltip="${elementParamName!}">${element.properties.label} <span class="form-cell-validator">${decoration!}</span><#if error??> <span class="form-error-message">${error}</span></#if></label>
@@ -14,7 +9,21 @@
     </#if>
 
     <#if element.properties.readonly! != 'true'>
-        <div class="excel-import-widget form-fileupload" id="excel-import-${element.properties.id!}-${element.properties.elementUniqueKey!}"></div>
+        <div class="excel-import-widget form-fileupload" id="excel-import-${element.properties.id!}-${element.properties.elementUniqueKey!}">
+            <div class="excel-import-dropzone">
+                <span class="ei-icon">&#128228;</span>
+                <span class="ei-text">${dropzoneText!"Choisir ou déposer un fichier Excel ici"}</span>
+                <span class="ei-hint">.xlsx, .xls</span>
+                <input type="file" accept=".xlsx,.xls" style="display:none" />
+            </div>
+            <div class="excel-import-filebar">
+                <span class="ei-fname"></span>
+                <span class="excel-import-remove">&#10005; Retirer</span>
+            </div>
+            <div class="excel-import-error" style="display:none"></div>
+            <div class="excel-import-summary" style="display:none"></div>
+            <div class="excel-import-preview" style="display:none"></div>
+        </div>
     </#if>
 
     <input type="hidden"
@@ -26,7 +35,7 @@
     <#if element.properties.readonly! != 'true'>
     <script type="text/javascript">
         (function () {
-            var base = "${request.contextPath}/plugin/org.joget.plugin.melkart.ExcelParser/js/";
+            var base = "${base}js/";
 
             // Load a script once, even when several Excel Parser elements are on the page.
             function loadOnce(src, cb) {

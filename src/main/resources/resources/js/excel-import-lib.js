@@ -1,8 +1,9 @@
 /**
  * Excel Import Library (Joget ExcelParser plugin)
  *
- * Self-contained: renders its own drop zone (no dependency on Joget's Dropzone),
- * parses the selected .xlsx/.xls client-side with the bundled SheetJS (XLSX),
+ * Wires up the import widget whose markup is rendered server-side in ExcelParser.ftl
+ * (drop zone, file bar, error/summary/preview containers) and styled by excel-import.css.
+ * It parses the selected .xlsx/.xls client-side with the bundled SheetJS (XLSX),
  * validates (required headers, required cells across columns, composite duplicate
  * key across columns), previews the data, and writes the validated rows -- as a
  * JSON array keyed by Excel header -- into the element's hidden input.
@@ -17,44 +18,8 @@
         return;
     }
 
-    var STYLE_ID = "excel-import-styles";
-
-    function injectCSS() {
-        if (document.getElementById(STYLE_ID)) {
-            return;
-        }
-        var style = document.createElement("style");
-        style.id = STYLE_ID;
-        style.textContent = [
-            ".excel-import-widget{width:100%;font-size:14px;}",
-            ".excel-import-dropzone{border:2px dashed #b6c0e0;border-radius:10px;padding:30px 20px;text-align:center;color:#5a6b9c;background:#f7f9ff;cursor:pointer;transition:all .2s ease;}",
-            ".excel-import-dropzone:hover,.excel-import-dropzone.dragover{border-color:#667eea;background:#eef2ff;color:#3d4f8a;}",
-            ".excel-import-dropzone .ei-icon{font-size:2.4em;display:block;margin-bottom:8px;}",
-            ".excel-import-dropzone .ei-hint{font-size:.85em;opacity:.7;margin-top:6px;}",
-            ".excel-import-filebar{display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;margin-top:10px;background:#eef2ff;border:1px solid #d3dbf5;border-radius:8px;}",
-            ".excel-import-filebar.active{display:flex;}",
-            ".excel-import-filebar .ei-fname{font-weight:600;color:#3d4f8a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}",
-            ".excel-import-remove{color:#dc3545;cursor:pointer;font-weight:600;white-space:nowrap;}",
-            ".excel-import-summary{margin-top:12px;font-weight:600;}",
-            ".excel-import-summary.ok{color:#198754;}",
-            ".excel-import-error{color:#842029;background:#f8d7da;border:1px solid #f5c2c7;border-radius:8px;padding:10px 14px;margin-top:12px;}",
-            ".excel-import-error ul{margin:6px 0 0 0;padding-left:18px;}",
-            ".excel-import-preview{margin-top:14px;border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.08);}",
-            ".excel-import-preview .ei-scroll{overflow:auto;}",
-            ".excel-import-preview table{width:100%;border-collapse:separate;border-spacing:0;margin:0;}",
-            ".excel-import-preview thead th{position:sticky;top:0;z-index:5;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:12px 14px;text-align:left;font-weight:600;white-space:nowrap;}",
-            ".excel-import-preview tbody td{padding:10px 14px;border-bottom:1px solid #eceff5;vertical-align:middle;}",
-            ".excel-import-preview tbody tr:nth-child(even){background:#f8f9fc;}",
-            ".excel-import-preview tbody tr.ei-row-bad{background:#fff3f4 !important;}",
-            ".excel-import-preview tbody tr.ei-row-dup{background:#fff8e6 !important;}",
-            ".excel-import-preview td.ei-cell-bad{box-shadow:inset 0 0 0 2px #dc3545;border-radius:4px;}",
-            ".excel-import-rownum{color:#9aa3bd;font-variant-numeric:tabular-nums;width:1%;}",
-            ".excel-import-chip{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.75em;margin-left:6px;color:#fff;}",
-            ".excel-import-chip.dup{background:#ffc107;color:#000;}",
-            ".excel-import-chip.bad{background:#dc3545;}"
-        ].join("\n");
-        document.head.appendChild(style);
-    }
+    // Only Excel files are permitted.
+    var ACCEPTED_EXT = [".xlsx", ".xls"];
 
     function ExcelImport(config) {
         this.config = config || {};
@@ -77,8 +42,10 @@
         if (!this.container) {
             return;
         }
-        injectCSS();
-        this.render();
+        this.cacheElements();
+        if (!this.dropzone) {
+            return;
+        }
         this.bindEvents();
         // Restore preview from an existing value (edit mode).
         var existing = this.hiddenInput ? this.hiddenInput.value : "";
@@ -92,18 +59,8 @@
         }
     };
 
-    ExcelImport.prototype.render = function () {
-        this.container.innerHTML =
-            '<div class="excel-import-dropzone">' +
-            '  <span class="ei-icon">&#128228;</span>' +
-            '  <span class="ei-text">' + escapeHtml(this.config.dropzoneText || "Choisir / déposer un fichier Excel") + '</span>' +
-            '  <span class="ei-hint">' + escapeHtml(this.config.acceptedFiles || ".xlsx,.xls") + '</span>' +
-            '  <input type="file" accept="' + escapeHtml(this.config.acceptedFiles || ".xlsx,.xls") + '" style="display:none" />' +
-            '</div>' +
-            '<div class="excel-import-filebar"><span class="ei-fname"></span><span class="excel-import-remove">&#10005; ' + "Retirer" + '</span></div>' +
-            '<div class="excel-import-error" style="display:none"></div>' +
-            '<div class="excel-import-summary" style="display:none"></div>' +
-            '<div class="excel-import-preview" style="display:none"></div>';
+    /** Cache references to the widget elements rendered server-side in the FTL template. */
+    ExcelImport.prototype.cacheElements = function () {
         this.dropzone = this.container.querySelector(".excel-import-dropzone");
         this.fileInput = this.container.querySelector('input[type="file"]');
         this.filebar = this.container.querySelector(".excel-import-filebar");
@@ -156,6 +113,7 @@
         }
         this.filebar.classList.remove("active");
         this.filebar.querySelector(".ei-fname").textContent = "";
+        this.dropzone.classList.remove("ei-hidden");
         this.previewBox.style.display = "none";
         this.previewBox.innerHTML = "";
         this.summaryBox.style.display = "none";
@@ -166,10 +124,9 @@
         var self = this;
         this.hideError();
 
-        // Extension check.
-        var accepted = (this.config.acceptedFiles || ".xlsx,.xls").split(",").map(function (s) { return s.trim().toLowerCase(); });
+        // Extension check (only Excel files are permitted).
         var name = file.name.toLowerCase();
-        var okExt = accepted.some(function (ext) { return ext && name.slice(-ext.length) === ext; });
+        var okExt = ACCEPTED_EXT.some(function (ext) { return name.slice(-ext.length) === ext; });
         if (!okExt) {
             this.showError([this.msg("readError")]);
             return;
@@ -181,6 +138,7 @@
             return;
         }
 
+        this.dropzone.classList.add("ei-hidden");
         this.filebar.classList.add("active");
         this.filebar.querySelector(".ei-fname").textContent = file.name;
 
@@ -369,7 +327,7 @@
         this.previewBox.style.display = "block";
         this.previewBox.innerHTML =
             "<div class='ei-scroll' style='max-height:" + maxH + "px'>" +
-            "<table class='table'><thead>" + thead + "</thead><tbody>" + tbody + "</tbody></table></div>";
+            "<table><thead>" + thead + "</thead><tbody>" + tbody + "</tbody></table></div>";
     };
 
     ExcelImport.prototype.showError = function (errors) {
@@ -377,7 +335,7 @@
         if (errors.length === 1) {
             html = escapeHtml(errors[0]);
         } else {
-            html = "<strong>" + errors.length + "</strong><ul>" +
+            html = "<ul>" +
                 errors.map(function (e) { return "<li>" + escapeHtml(e) + "</li>"; }).join("") + "</ul>";
         }
         this.errorBox.innerHTML = html;

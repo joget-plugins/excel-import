@@ -154,6 +154,8 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
 
         dataModel.put("value", value);
         dataModel.put("jsConfig", buildClientConfig());
+        dataModel.put("dropzoneText", defaultStr(getPropertyString("dropzoneText"),
+                AppPluginUtil.getMessage("ExcelParser.dropzoneTextDefault", getClassName(), MESSAGES_PATH)));
 
         return FormUtil.generateElementHtml(this, formData, template, dataModel);
     }
@@ -189,11 +191,8 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
             cfg.put("uniqueColumns", uniqueColumns);
             cfg.put("caseSensitive", "true".equalsIgnoreCase(getPropertyString("caseSensitiveHeaders")));
             cfg.put("required", "true".equalsIgnoreCase(getPropertyString("required")));
-            cfg.put("acceptedFiles", defaultStr(getPropertyString("acceptedFiles"), ".xlsx,.xls"));
             cfg.put("maxFileSizeMB", parseDouble(getPropertyString("maxFileSizeMB"), 5));
             cfg.put("previewHeight", defaultStr(getPropertyString("previewHeight"), "400"));
-            cfg.put("dropzoneText", defaultStr(getPropertyString("dropzoneText"),
-                    AppPluginUtil.getMessage("ExcelParser.dropzoneTextDefault", getClassName(), MESSAGES_PATH)));
 
             // Localised messages shared with the client (overridable per element).
             JSONObject messages = new JSONObject();

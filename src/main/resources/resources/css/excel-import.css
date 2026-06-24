@@ -1,0 +1,221 @@
+/*
+ * Excel Parser plugin styles.
+ * Loaded once via a <link> in ExcelParser.ftl (no JS injection).
+ */
+
+.excel-import-fullwidth > label {
+    flex: 0 0 100% !important;
+    width: 100%;
+}
+
+.excel-import-widget {
+    width: 100%;
+    font-size: 14px;
+    color: #1f2937;
+}
+
+/* ---- Drop zone ---- */
+.excel-import-dropzone {
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    color: #64748b;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+}
+
+.excel-import-dropzone:hover,
+.excel-import-dropzone.dragover {
+    border-color: #6366f1;
+    background: #f5f3ff;
+    color: #4f46e5;
+}
+
+.excel-import-dropzone .ei-icon {
+    font-size: 2.2em;
+    display: block;
+    margin-bottom: 8px;
+    opacity: .8;
+}
+
+.excel-import-dropzone .ei-text {
+    font-weight: 500;
+}
+
+.excel-import-dropzone .ei-hint {
+    font-size: .82em;
+    opacity: .65;
+    margin-top: 6px;
+    display: block;
+}
+
+/* Hidden once a file is chosen. */
+.excel-import-dropzone.ei-hidden {
+    display: none;
+}
+
+/* ---- Selected-file bar ---- */
+.excel-import-filebar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+.excel-import-filebar.active {
+    display: flex;
+}
+
+.excel-import-filebar .ei-fname {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.excel-import-filebar .ei-fname::before {
+    content: "\1F4C4";
+    opacity: .7;
+}
+
+.excel-import-remove {
+    color: #64748b;
+    cursor: pointer;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: color .15s ease;
+}
+
+.excel-import-remove:hover {
+    color: #dc2626;
+}
+
+/* ---- Summary / errors ---- */
+.excel-import-summary {
+    margin-top: 12px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.excel-import-summary.ok {
+    color: #059669;
+}
+
+.excel-import-error {
+    color: #b42318;
+    background: #fef3f2;
+    border: 1px solid #fecdca;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 12px;
+}
+
+.excel-import-error ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.excel-import-error li + li {
+    margin-top: 4px;
+}
+
+/* ---- Preview table ---- */
+.excel-import-preview {
+    margin-top: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.excel-import-preview .ei-scroll {
+    overflow: auto;
+}
+
+.excel-import-preview table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0;
+}
+
+.excel-import-preview thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #f8fafc;
+    color: #475569;
+    padding: 11px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: .8em;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.excel-import-preview tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #334155;
+}
+
+.excel-import-preview tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.excel-import-preview tbody tr:hover td {
+    background: #f8fafc;
+}
+
+.excel-import-preview tbody tr.ei-row-bad {
+    background: #fef6f6;
+}
+
+.excel-import-preview tbody tr.ei-row-dup {
+    background: #fffbeb;
+}
+
+/* Soft highlight for invalid required cells (no heavy border). */
+.excel-import-preview td.ei-cell-bad {
+    background: #fef3f2;
+    box-shadow: inset 0 0 0 1px #fecdca;
+}
+
+.excel-import-rownum {
+    color: #94a3b8;
+    font-variant-numeric: tabular-nums;
+    width: 1%;
+}
+
+.excel-import-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: .72em;
+    font-weight: 600;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.excel-import-chip.dup {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.excel-import-chip.bad {
+    background: #fee2e2;
+    color: #b42318;
+}

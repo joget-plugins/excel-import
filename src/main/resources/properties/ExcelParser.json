@@ -187,12 +187,6 @@
         "title": "@@ExcelParser.uiOptions@@",
         "properties": [
             {
-                "name": "acceptedFiles",
-                "label": "@@ExcelParser.acceptedFiles@@",
-                "type": "textfield",
-                "value": ".xlsx,.xls"
-            },
-            {
                 "name": "maxFileSizeMB",
                 "label": "@@ExcelParser.maxFileSizeMB@@",
                 "type": "textfield",
