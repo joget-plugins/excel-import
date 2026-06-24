@@ -195,15 +195,15 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
             cfg.put("dropzoneText", defaultStr(getPropertyString("dropzoneText"),
                     AppPluginUtil.getMessage("ExcelParser.dropzoneTextDefault", getClassName(), MESSAGES_PATH)));
 
-            // Localised messages shared with the client.
+            // Localised messages shared with the client (overridable per element).
             JSONObject messages = new JSONObject();
-            messages.put("missingHeaders", msg("ExcelParser.err.missingHeaders"));
-            messages.put("requiredCell", msg("ExcelParser.err.requiredCell"));
-            messages.put("duplicate", msg("ExcelParser.err.duplicate"));
-            messages.put("emptyFile", msg("ExcelParser.err.emptyFile"));
-            messages.put("readError", msg("ExcelParser.err.readError"));
-            messages.put("fileTooLarge", msg("ExcelParser.err.fileTooLarge"));
-            messages.put("rowsValid", msg("ExcelParser.info.rowsValid"));
+            messages.put("missingHeaders", customMsg("msgMissingHeaders", "ExcelParser.err.missingHeaders"));
+            messages.put("requiredCell", customMsg("msgRequiredCell", "ExcelParser.err.requiredCell"));
+            messages.put("duplicate", customMsg("msgDuplicate", "ExcelParser.err.duplicate"));
+            messages.put("emptyFile", customMsg("msgEmptyFile", "ExcelParser.err.emptyFile"));
+            messages.put("readError", customMsg("msgReadError", "ExcelParser.err.readError"));
+            messages.put("fileTooLarge", customMsg("msgFileTooLarge", "ExcelParser.err.fileTooLarge"));
+            messages.put("rowsValid", customMsg("msgRowsValid", "ExcelParser.info.rowsValid"));
             cfg.put("messages", messages);
         } catch (Exception e) {
             LogUtil.error(getClassName(), e, "Error building client config");
@@ -440,7 +440,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         boolean empty = (value == null || value.trim().isEmpty());
         if (empty) {
             if (required) {
-                formData.addFormError(fieldId, msg("ExcelParser.err.required"));
+                formData.addFormError(fieldId, customMsg("msgRequired", "ExcelParser.err.required"));
                 return false;
             }
             return true;
@@ -453,13 +453,13 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         try {
             arr = new JSONArray(value);
         } catch (Exception e) {
-            formData.addFormError(fieldId, msg("ExcelParser.err.invalidData"));
+            formData.addFormError(fieldId, customMsg("msgInvalidData", "ExcelParser.err.invalidData"));
             return false;
         }
 
         if (arr.length() == 0) {
             if (required) {
-                formData.addFormError(fieldId, msg("ExcelParser.err.required"));
+                formData.addFormError(fieldId, customMsg("msgRequired", "ExcelParser.err.required"));
                 return false;
             }
             return true;
@@ -475,7 +475,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
             }
         }
         if (!missingHeaders.isEmpty()) {
-            formData.addFormError(fieldId, format(msg("ExcelParser.err.missingHeaders"), join(missingHeaders, ", "), ""));
+            formData.addFormError(fieldId, format(customMsg("msgMissingHeaders", "ExcelParser.err.missingHeaders"), join(missingHeaders, ", "), ""));
             return false;
         }
 
@@ -493,7 +493,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
                 }
             }
             if (!badRows.isEmpty()) {
-                formData.addFormError(fieldId, format(msg("ExcelParser.err.requiredCell"), header, join(badRows, ", ")));
+                formData.addFormError(fieldId, format(customMsg("msgRequiredCell", "ExcelParser.err.requiredCell"), header, join(badRows, ", ")));
                 return false;
             }
         }
@@ -518,7 +518,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
                 }
             }
             if (!dupRows.isEmpty()) {
-                formData.addFormError(fieldId, format(msg("ExcelParser.err.duplicate"), join(uniqueHeaders, " + "), join(dupRows, ", ")));
+                formData.addFormError(fieldId, format(customMsg("msgDuplicate", "ExcelParser.err.duplicate"), join(uniqueHeaders, " + "), join(dupRows, ", ")));
                 return false;
             }
 
@@ -526,11 +526,11 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
             if ("true".equalsIgnoreCase(getPropertyString("checkExistingDuplicates"))) {
                 List<String> existingDupRows = findExistingDuplicates(arr, uniqueHeaders, columns, caseSensitive, formData);
                 if (existingDupRows == null) {
-                    formData.addFormError(fieldId, msg("ExcelParser.err.invalidData"));
+                    formData.addFormError(fieldId, customMsg("msgInvalidData", "ExcelParser.err.invalidData"));
                     return false;
                 }
                 if (!existingDupRows.isEmpty()) {
-                    formData.addFormError(fieldId, format(msg("ExcelParser.err.existingDuplicate"), join(uniqueHeaders, " + "), join(existingDupRows, ", ")));
+                    formData.addFormError(fieldId, format(customMsg("msgExistingDuplicate", "ExcelParser.err.existingDuplicate"), join(uniqueHeaders, " + "), join(existingDupRows, ", ")));
                     return false;
                 }
             }
@@ -778,6 +778,19 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
 
     protected String msg(String key) {
         return AppPluginUtil.getMessage(key, getClassName(), MESSAGES_PATH);
+    }
+
+    /**
+     * Resolves a user-facing message: uses the value configured under {@code propName}
+     * (the "Messages d'erreur" tab) when set, otherwise falls back to the localised
+     * default keyed by {@code defaultKey} from messages.properties.
+     */
+    protected String customMsg(String propName, String defaultKey) {
+        String custom = getPropertyString(propName);
+        if (custom != null && !custom.trim().isEmpty()) {
+            return custom;
+        }
+        return msg(defaultKey);
     }
 
     protected static String format(String template, String arg0, String arg1) {

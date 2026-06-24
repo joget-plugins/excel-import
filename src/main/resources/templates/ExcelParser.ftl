@@ -1,21 +1,27 @@
-<div class="form-cell" ${elementMetaData!}>
-    <div class="form-cell-value">
-        <#if element.properties.label?? && element.properties.label?has_content>
-            <label class="label" field-tooltip="${elementParamName!}">${element.properties.label} <span class="form-cell-validator">${decoration!}</span><#if error??> <span class="form-error-message">${error}</span></#if></label>
-        <#elseif error??>
-            <label class="label"><span class="form-error-message">${error}</span></label>
-        </#if>
+<#if element.properties.fullWidth! == 'true'>
+<style>
+    .form-cell.excel-import-fullwidth > label{
+        flex: 0 0 100% !important;
+        width:100%;
+    }
+</style>
+</#if>
+<div class="form-cell<#if element.properties.fullWidth! == 'true'> excel-import-fullwidth</#if>" ${elementMetaData!}>
+    <#if element.properties.label?? && element.properties.label?has_content>
+        <label class="label" field-tooltip="${elementParamName!}">${element.properties.label} <span class="form-cell-validator">${decoration!}</span><#if error??> <span class="form-error-message">${error}</span></#if></label>
+    <#elseif error??>
+        <label class="label"><span class="form-error-message">${error}</span></label>
+    </#if>
 
-        <#if element.properties.readonly! != 'true'>
-            <div class="excel-import-widget" id="excel-import-${element.properties.id!}-${element.properties.elementUniqueKey!}"></div>
-        </#if>
+    <#if element.properties.readonly! != 'true'>
+        <div class="excel-import-widget form-fileupload" id="excel-import-${element.properties.id!}-${element.properties.elementUniqueKey!}"></div>
+    </#if>
 
-        <input type="hidden"
-               class="excel-import-input"
-               name="${elementParamName!}"
-               value="${value!?html}"
-               <#if element.properties.id??>data-element-id="${element.properties.id!}"</#if> />
-    </div>
+    <input type="hidden"
+        class="excel-import-input"
+        name="${elementParamName!}"
+        value="${value!?html}"
+        <#if element.properties.id??>data-element-id="${element.properties.id!}"</#if> />
 
     <#if element.properties.readonly! != 'true'>
     <script type="text/javascript">

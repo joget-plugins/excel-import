@@ -209,6 +209,84 @@
                 "label": "@@ExcelParser.dropzoneText@@",
                 "type": "textfield",
                 "value": "@@ExcelParser.dropzoneTextDefault@@"
+            },
+            {
+                "name": "fullWidth",
+                "label": "@@ExcelParser.fullWidth@@",
+                "description": "@@ExcelParser.fullWidthDesc@@",
+                "type": "checkbox",
+                "value": "",
+                "options": [
+                    {
+                        "value": "true",
+                        "label": ""
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "title": "@@ExcelParser.messagesTab@@",
+        "properties": [
+            {
+                "name": "msgRequired",
+                "label": "@@ExcelParser.msg.required@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.err.required@@"
+            },
+            {
+                "name": "msgInvalidData",
+                "label": "@@ExcelParser.msg.invalidData@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.err.invalidData@@"
+            },
+            {
+                "name": "msgMissingHeaders",
+                "label": "@@ExcelParser.msg.missingHeaders@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.err.missingHeaders@@"
+            },
+            {
+                "name": "msgRequiredCell",
+                "label": "@@ExcelParser.msg.requiredCell@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.err.requiredCell@@"
+            },
+            {
+                "name": "msgDuplicate",
+                "label": "@@ExcelParser.msg.duplicate@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.err.duplicate@@"
+            },
+            {
+                "name": "msgExistingDuplicate",
+                "label": "@@ExcelParser.msg.existingDuplicate@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.err.existingDuplicate@@"
+            },
+            {
+                "name": "msgEmptyFile",
+                "label": "@@ExcelParser.msg.emptyFile@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.err.emptyFile@@"
+            },
+            {
+                "name": "msgReadError",
+                "label": "@@ExcelParser.msg.readError@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.err.readError@@"
+            },
+            {
+                "name": "msgFileTooLarge",
+                "label": "@@ExcelParser.msg.fileTooLarge@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.err.fileTooLarge@@"
+            },
+            {
+                "name": "msgRowsValid",
+                "label": "@@ExcelParser.msg.rowsValid@@",
+                "type": "textfield",
+                "value": "@@ExcelParser.info.rowsValid@@"
             }
         ]
     }
