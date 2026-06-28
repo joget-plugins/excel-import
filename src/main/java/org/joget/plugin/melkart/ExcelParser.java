@@ -535,6 +535,14 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         return result;
     }
 
+    /**
+     * @return {@code true} when the host form's own store binder must be prevented from persisting
+     *         its (parent) record, so only the imported Excel rows are stored.
+     */
+    protected boolean isParentStoreDisabled() {
+        return "true".equalsIgnoreCase(getPropertyString("disableParentStore"));
+    }
+
     /** @return the configured parent (foreign-key) column, or {@code null} when no link is configured. */
     protected String getParentColumn() {
         String col = getPropertyString("parentColumnName");

@@ -81,6 +81,19 @@
         "title": "@@ExcelParser.storage@@",
         "properties": [
             {
+                "name": "disableParentStore",
+                "label": "@@ExcelParser.disableParentStore@@",
+                "description": "@@ExcelParser.disableParentStoreDesc@@",
+                "type": "checkbox",
+                "value": "",
+                "options": [
+                    {
+                        "value": "true",
+                        "label": ""
+                    }
+                ]
+            },
+            {
                 "name": "customStorageTarget",
                 "label": "@@ExcelParser.customStorageTarget@@",
                 "description": "@@ExcelParser.customStorageTargetDesc@@",

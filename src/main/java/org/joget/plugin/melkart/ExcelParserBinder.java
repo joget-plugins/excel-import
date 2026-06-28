@@ -11,12 +11,14 @@ import java.util.Properties;
 import org.joget.apps.app.service.AppUtil;
 import org.joget.apps.form.dao.FormDataDao;
 import org.joget.apps.form.model.Element;
+import org.joget.apps.form.model.Form;
 import org.joget.apps.form.model.FormBinder;
 import org.joget.apps.form.model.FormData;
 import org.joget.apps.form.model.FormLoadBinder;
 import org.joget.apps.form.model.FormRow;
 import org.joget.apps.form.model.FormRowSet;
 import org.joget.apps.form.model.FormStoreBinder;
+import org.joget.apps.form.service.FormUtil;
 import org.joget.commons.util.LogUtil;
 import org.joget.commons.util.UuidGenerator;
 import org.joget.workflow.util.WorkflowUtil;
@@ -90,6 +92,12 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
         }
         ExcelParser ep = (ExcelParser) element;
 
+        // When configured, stop the host form's own store binder from persisting its (parent) record,
+        // so only the imported Excel rows are stored.
+        if (ep.isParentStoreDisabled()) {
+            suppressHostRecordStore(ep, element, formData);
+        }
+
         ExcelParser.StorageTarget target = ep.resolveStorageTarget();
         if (target == null) {
             LogUtil.warn(getClassName(), "No storage target could be resolved; skipping Excel import store.");
@@ -145,6 +153,33 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
             LogUtil.error(getClassName(), e, "Error storing Excel import rows to " + target.tableName);
         }
         return rows;
+    }
+
+    /**
+     * Prevents the host form's own store binder from persisting its (parent) record, leaving only
+     * the imported Excel rows to be stored.
+     *
+     * <p>Joget executes store binders depth-first with the root form's own binder running <em>last</em>
+     * (children before parent). This binder belongs to a child element, so it runs before the root
+     * form binder: clearing the root binder's row set here leaves it with nothing to save when it runs.
+     * The default {@code WorkflowFormBinder} short-circuits on an empty row set, so no record is written
+     * and any existing record is left untouched.</p>
+     */
+    protected void suppressHostRecordStore(ExcelParser ep, Element element, FormData formData) {
+        try {
+            Form rootForm = FormUtil.findRootForm(element);
+            if (rootForm == null) {
+                return;
+            }
+            FormStoreBinder hostBinder = rootForm.getStoreBinder();
+            if (hostBinder == null || hostBinder == ep.getStoreBinder()) {
+                return; // nothing to suppress, or this element is itself the root binder
+            }
+            formData.setStoreBinderData(hostBinder, new FormRowSet());
+            LogUtil.info(getClassName(), "Host form record store suppressed; only Excel rows will be stored.");
+        } catch (Exception e) {
+            LogUtil.error(getClassName(), e, "Failed to suppress host form record store.");
+        }
     }
 
     /**
