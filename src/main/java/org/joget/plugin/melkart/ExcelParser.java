@@ -220,6 +220,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
             cfg.put("required", "true".equalsIgnoreCase(getPropertyString("required")));
             cfg.put("maxFileSizeMB", parseDouble(getPropertyString("maxFileSizeMB"), 5));
             cfg.put("previewHeight", defaultStr(getPropertyString("previewHeight"), "400"));
+            cfg.put("showPreview", !"true".equalsIgnoreCase(getPropertyString("hidePreview")));
 
             // Localised messages shared with the client (overridable per element).
             JSONObject messages = new JSONObject();

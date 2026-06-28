@@ -138,6 +138,16 @@
     background: #fff;
 }
 
+/*
+ * Rendered as a sibling of the widget (a direct child of .form-cell) so it breaks onto its
+ * own row and spans the full form width, regardless of the field's column width -- mirroring
+ * the full-width label rule above.
+ */
+.excel-import-preview-block {
+    flex: 0 0 100% !important;
+    width: 100%;
+}
+
 .excel-import-preview .ei-scroll {
     overflow: auto;
 }

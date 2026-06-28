@@ -22,8 +22,14 @@
             </div>
             <div class="excel-import-error" style="display:none"></div>
             <div class="excel-import-summary" style="display:none"></div>
-            <div class="excel-import-preview" style="display:none"></div>
         </div>
+        <#-- Preview lives outside the widget so it always spans the full form width,
+             independent of the field column width. Rendered only when not hidden. -->
+        <#if element.properties.hidePreview! != 'true'>
+            <div class="excel-import-preview excel-import-preview-block"
+                 id="excel-import-${element.properties.id!}-${element.properties.elementUniqueKey!}-preview"
+                 style="display:none"></div>
+        </#if>
     </#if>
 
     <input type="hidden"

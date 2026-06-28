@@ -192,6 +192,19 @@
                 "value": "5"
             },
             {
+                "name": "hidePreview",
+                "label": "@@ExcelParser.hidePreview@@",
+                "description": "@@ExcelParser.hidePreviewDesc@@",
+                "type": "checkbox",
+                "value": "",
+                "options": [
+                    {
+                        "value": "true",
+                        "label": ""
+                    }
+                ]
+            },
+            {
                 "name": "previewHeight",
                 "label": "@@ExcelParser.previewHeight@@",
                 "type": "textfield",

@@ -66,7 +66,9 @@
         this.filebar = this.container.querySelector(".excel-import-filebar");
         this.errorBox = this.container.querySelector(".excel-import-error");
         this.summaryBox = this.container.querySelector(".excel-import-summary");
-        this.previewBox = this.container.querySelector(".excel-import-preview");
+        // The preview is rendered as a sibling of the widget (outside this.container) so it can
+        // span the full form width, and is omitted entirely when "hide preview" is enabled.
+        this.previewBox = document.getElementById(this.config.containerId + "-preview");
     };
 
     ExcelImport.prototype.bindEvents = function () {
@@ -114,8 +116,10 @@
         this.filebar.classList.remove("active");
         this.filebar.querySelector(".ei-fname").textContent = "";
         this.dropzone.classList.remove("ei-hidden");
-        this.previewBox.style.display = "none";
-        this.previewBox.innerHTML = "";
+        if (this.previewBox) {
+            this.previewBox.style.display = "none";
+            this.previewBox.innerHTML = "";
+        }
         this.summaryBox.style.display = "none";
         this.hideError();
     };
@@ -300,6 +304,7 @@
     };
 
     ExcelImport.prototype.renderPreview = function (rows, badCells, rowDup, rowBad) {
+        if (!this.previewBox) { return; } // preview hidden via config
         badCells = badCells || {};
         rowDup = rowDup || {};
         rowBad = rowBad || {};
