@@ -131,15 +131,14 @@
                 "name": "parentColumnName",
                 "label": "@@ExcelParser.parentColumnName@@",
                 "description": "@@ExcelParser.parentColumnNameDesc@@",
-                "type": "textfield",
-                "value": ""
+                "type": "textfield"
             },
             {
                 "name": "parentColumnValue",
                 "label": "@@ExcelParser.parentColumnValue@@",
                 "description": "@@ExcelParser.parentColumnValueDesc@@",
-                "type": "textfield",
-                "value": ""
+                "type": "autocomplete",
+                "options_ajax": "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
             },
             {
                 "name": "deleteExisting",

@@ -3,11 +3,12 @@ package org.joget.plugin.melkart;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.joget.apps.app.model.AppDefinition;
 import org.joget.apps.app.service.AppPluginUtil;
@@ -16,18 +17,17 @@ import org.joget.apps.app.service.AppUtil;
 import org.joget.apps.form.dao.FormDataDao;
 import org.joget.apps.form.model.Element;
 import org.joget.apps.form.model.Form;
+import org.joget.apps.form.model.FormBinder;
 import org.joget.apps.form.model.FormBuilderPalette;
 import org.joget.apps.form.model.FormBuilderPaletteElement;
+import org.joget.apps.form.model.FormContainer;
 import org.joget.apps.form.model.FormData;
 import org.joget.apps.form.model.FormLoadBinder;
-import org.joget.apps.form.model.FormLoadElementBinder;
 import org.joget.apps.form.model.FormRow;
 import org.joget.apps.form.model.FormRowSet;
 import org.joget.apps.form.model.FormStoreBinder;
-import org.joget.apps.form.model.FormStoreElementBinder;
 import org.joget.apps.form.service.FormUtil;
 import org.joget.commons.util.LogUtil;
-import org.joget.commons.util.UuidGenerator;
 import org.joget.workflow.util.WorkflowUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -39,14 +39,17 @@ import org.json.JSONObject;
  * parsed with a bundled copy of SheetJS/xlsx). The validated rows are written, keyed by
  * Excel header, into a hidden field as a JSON array.</p>
  *
- * <p>The element acts as its own {@link FormStoreBinder} / {@link FormLoadBinder}: on submit
- * every Excel row is stored as one record in a configurable target form/table (multi-row),
- * each linked to the current submission via a configurable parent foreign-key column. The
+ * <p>Persistence is delegated to a companion {@link ExcelParserBinder} (a real
+ * {@link FormBinder}) which this element supplies through {@link #getStoreBinder()} /
+ * {@link #getLoadBinder()}: on submit every Excel row is stored as one record in a configurable
+ * target form/table (multi-row), each linked to the current submission via a configurable parent
+ * foreign-key column. The binder is a separate class because Joget's {@code Element} and
+ * {@code FormBinder} are distinct (sibling) types and a single class cannot be both. The
  * front-end validation (required headers, required cells across columns, composite duplicate
  * key across columns) is mirrored server-side in {@link #selfValidate(FormData)} and blocks
  * the submission on any error.</p>
  */
-public class ExcelParser extends Element implements FormBuilderPaletteElement, FormStoreElementBinder, FormLoadElementBinder {
+public class ExcelParser extends Element implements FormBuilderPaletteElement, FormContainer {
 
     public static final String MESSAGES_PATH = "messages/ExcelParser";
 
@@ -118,17 +121,36 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
     }
 
     //
-    // ---- Wire this element as its own load/store binder ----
+    // ---- Supply the companion binder (a real FormBinder) ----
     //
+    // The element cannot be its own binder: Element and FormBinder are sibling types, so the
+    // runtime cast "(FormBinder) element.getStoreBinder()" would throw ClassCastException.
+    // Instead we hand back a cached ExcelParserBinder instance. It is cached (via the inherited
+    // store/load binder fields) because Joget keys the formatData() row set by the exact binder
+    // instance returned here and later looks it up again to invoke store().
 
     @Override
     public FormStoreBinder getStoreBinder() {
-        return this;
+        FormStoreBinder binder = super.getStoreBinder();
+        if (binder == null) {
+            ExcelParserBinder excelBinder = new ExcelParserBinder();
+            excelBinder.setElement(this);
+            setStoreBinder(excelBinder);
+            binder = excelBinder;
+        }
+        return binder;
     }
 
     @Override
     public FormLoadBinder getLoadBinder() {
-        return this;
+        FormLoadBinder binder = super.getLoadBinder();
+        if (binder == null) {
+            ExcelParserBinder excelBinder = new ExcelParserBinder();
+            excelBinder.setElement(this);
+            setLoadBinder(excelBinder);
+            binder = excelBinder;
+        }
+        return binder;
     }
 
     //
@@ -138,6 +160,9 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
     @Override
     public String renderTemplate(FormData formData, Map dataModel) {
         String template = "ExcelParser.ftl";
+
+        String parentValue = resolveParentValue(formData);
+        LogUtil.info(getClassName(), "Excel import render: parentColumn=" + getParentColumn() + ", parentValue=" + parentValue);
 
         // Current value: prefer a submitted (or failed-validation reload) value, otherwise
         // rebuild it from the existing child records so an edit/no-change re-submit is a no-op.
@@ -153,6 +178,8 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         }
 
         dataModel.put("value", value);
+        dataModel.put("parentCarrierName", getParentCarrierName());
+        dataModel.put("resolvedParentValue", parentValue != null ? parentValue : "");
         dataModel.put("jsConfig", buildClientConfig());
         dataModel.put("dropzoneText", defaultStr(getPropertyString("dropzoneText"),
                 AppPluginUtil.getMessage("ExcelParser.dropzoneTextDefault", getClassName(), MESSAGES_PATH)));
@@ -211,7 +238,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
     }
 
     //
-    // ---- Store binder ----
+    // ---- Element data (rows handed to the store binder) ----
     //
 
     @Override
@@ -248,127 +275,9 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         return rowSet;
     }
 
-    @Override
-    public FormRowSet store(Element element, FormRowSet rows, FormData formData) {
-        StorageTarget target = resolveStorageTarget();
-        if (target == null) {
-            LogUtil.warn(getClassName(), "No storage target could be resolved; skipping Excel import store.");
-            return rows;
-        }
-
-        FormDataDao formDataDao = (FormDataDao) AppUtil.getApplicationContext().getBean("formDataDao");
-
-        String parentColumn = getParentColumn();              // may be null when no link is configured
-        String parentValue = resolveParentValue(formData);    // may be null when no value resolves
-        boolean linkParent = parentColumn != null && parentValue != null && !parentValue.isEmpty();
-
-        try {
-            // Replace strategy: remove the previous rows before saving the new ones.
-            if ("true".equalsIgnoreCase(getPropertyStringOrDefault("deleteExisting", "true"))) {
-                if ("uniqueKeys".equalsIgnoreCase(getReplaceStrategy())) {
-                    deleteByUniqueKeys(formDataDao, target, rows);
-                } else if (linkParent) {
-                    FormRowSet existing = formDataDao.find(target.formDefId, target.tableName,
-                            " WHERE e.customProperties." + parentColumn + " = ?",
-                            new Object[]{parentValue}, null, null, null, null);
-                    if (existing != null && !existing.isEmpty()) {
-                        formDataDao.delete(target.formDefId, target.tableName, existing);
-                    }
-                } else {
-                    LogUtil.info(getClassName(), "Replace-by-parent requested but no parent column/value is configured; skipping delete.");
-                }
-            }
-
-            if (rows != null && !rows.isEmpty()) {
-                Date now = new Date();
-                String user = WorkflowUtil.getCurrentUsername();
-                for (FormRow row : rows) {
-                    if (row.getId() == null || row.getId().isEmpty()) {
-                        row.setId(UuidGenerator.getInstance().getUuid());
-                    }
-                    if (linkParent) {
-                        row.setProperty(parentColumn, parentValue);
-                    }
-                    if (row.getDateCreated() == null) {
-                        row.setDateCreated(now);
-                    }
-                    row.setDateModified(now);
-                    if (row.getCreatedBy() == null) {
-                        row.setCreatedBy(user);
-                    }
-                    row.setModifiedBy(user);
-                }
-                formDataDao.saveOrUpdate(target.formDefId, target.tableName, rows);
-            }
-        } catch (Exception e) {
-            LogUtil.error(getClassName(), e, "Error storing Excel import rows to " + target.tableName);
-        }
-        return rows;
-    }
-
-    /**
-     * Deletes existing rows whose unique-key combination matches any of the incoming rows
-     * (upsert-by-unique-key replace strategy). No-op when no unique-key columns are configured.
-     */
-    protected void deleteByUniqueKeys(FormDataDao formDataDao, StorageTarget target, FormRowSet rows) {
-        if (rows == null || rows.isEmpty()) {
-            return;
-        }
-        List<String> uniqueFieldIds = new ArrayList<String>();
-        for (Map<String, String> col : getColumns()) {
-            if ("true".equalsIgnoreCase(col.get("uniqueKey"))) {
-                String fieldId = col.get("fieldId");
-                if (fieldId != null && !fieldId.isEmpty()) {
-                    uniqueFieldIds.add(fieldId);
-                }
-            }
-        }
-        if (uniqueFieldIds.isEmpty()) {
-            LogUtil.warn(getClassName(), "Replace-by-unique-keys requested but no unique-key columns are configured; skipping delete.");
-            return;
-        }
-
-        FormRowSet toDelete = new FormRowSet();
-        for (FormRow row : rows) {
-            StringBuilder condition = new StringBuilder(" WHERE ");
-            List<Object> params = new ArrayList<Object>();
-            boolean first = true;
-            for (String fieldId : uniqueFieldIds) {
-                if (!first) {
-                    condition.append(" AND ");
-                }
-                condition.append("e.customProperties.").append(fieldId).append(" = ?");
-                params.add(row.getProperty(fieldId));
-                first = false;
-            }
-            FormRowSet existing = formDataDao.find(target.formDefId, target.tableName,
-                    condition.toString(), params.toArray(), null, null, null, null);
-            if (existing != null) {
-                toDelete.addAll(existing);
-            }
-        }
-        if (!toDelete.isEmpty()) {
-            formDataDao.delete(target.formDefId, target.tableName, toDelete);
-        }
-    }
-
     //
-    // ---- Load binder (rebuild preview on edit) ----
+    // ---- Child-record helpers (shared by the binder, validation and rendering) ----
     //
-
-    @Override
-    public FormRowSet load(Element element, String primaryKey, FormData formData) {
-        FormRowSet rowSet = new FormRowSet();
-        rowSet.setMultiRow(true);
-        if (primaryKey == null || primaryKey.isEmpty()) {
-            return rowSet;
-        }
-        FormRowSet existing = findChildRows(primaryKey, formData);
-        if (existing != null) {
-            rowSet.addAll(existing);
-        }
-        return rowSet;
-    }
 
     /**
      * Rebuilds the hidden-field JSON (keyed by Excel header) from the stored child records,
@@ -632,17 +541,41 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
     }
 
     /**
-     * Resolves the value written into (and queried against) the parent column. A configured
-     * {@code parentColumnValue} wins (hash variables resolved); otherwise it falls back to the
-     * current submission's primary key.
+     * Resolves the value written into (and queried against) the parent column.
+     *
+     * <p>Resolution order:</p>
+     * <ol>
+     *   <li>A value captured at render time and carried through the submission as a hidden field.
+     *       This is essential for request-param hash variables (e.g. {@code #requestParam.referent_id#}):
+     *       on submit the request is the POST to the form action URL, which no longer carries the
+     *       original load-URL query parameters, so re-resolving the hash variable here would yield
+     *       an empty string.</li>
+     *   <li>The configured {@code parentColumnValue} with hash variables resolved (this is what
+     *       runs at render time, while the original request parameters are still present).</li>
+     *   <li>The current submission's primary key.</li>
+     * </ol>
      */
     protected String resolveParentValue(FormData formData) {
+        if (formData != null) {
+            String carried = formData.getRequestParameter(getParentCarrierName());
+            if (carried != null && !carried.trim().isEmpty()) {
+                return carried.trim();
+            }
+        }
         String v = getPropertyString("parentColumnValue");
         if (v != null && !v.trim().isEmpty()) {
             String processed = AppUtil.processHashVariable(v.trim(), null, null, null);
             return (processed != null && !processed.isEmpty()) ? processed : v.trim();
         }
         return formData != null ? formData.getPrimaryKeyValue() : null;
+    }
+
+    /**
+     * Name of the hidden field that carries the render-time resolved parent value through the
+     * submission, so {@link #store} does not depend on the (now gone) original request parameters.
+     */
+    protected String getParentCarrierName() {
+        return FormUtil.getElementParameterName(this) + "_resolvedParent";
     }
 
     /** @return the replace strategy: "parentId" (default) or "uniqueKeys". */

@@ -80,7 +80,11 @@
             <scope>provided</scope>
         </dependency>
         <!-- Change plugin specific dependencies here -->
-        
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>jsp-api</artifactId>
+            <version>2.0</version>
+        </dependency>
         <!-- End change plugin specific dependencies here -->
     </dependencies>
     <distributionManagement>

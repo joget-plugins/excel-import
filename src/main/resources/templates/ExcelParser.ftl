@@ -16,7 +16,7 @@
                 <span class="ei-hint">.xlsx, .xls</span>
                 <input type="file" accept=".xlsx,.xls" style="display:none" />
             </div>
-            <div class="excel-import-filebar">
+            <div class="excel-import-filebar form-fileupload">
                 <span class="ei-fname"></span>
                 <span class="excel-import-remove">&#10005; Retirer</span>
             </div>
@@ -28,9 +28,16 @@
 
     <input type="hidden"
         class="excel-import-input"
-        name="${elementParamName!}"
         value="${value!?html}"
+        name="${elementParamName!}"
         <#if element.properties.id??>data-element-id="${element.properties.id!}"</#if> />
+
+    <#-- Carries the render-time resolved parent value through the submission, so store() does not
+         depend on the original form-load URL request parameters (which the submit POST loses). -->
+    <input type="hidden"
+        class="excel-import-parent"
+        value="${resolvedParentValue!?html}"
+        name="${parentCarrierName!}" />
 
     <#if element.properties.readonly! != 'true'>
     <script type="text/javascript">
