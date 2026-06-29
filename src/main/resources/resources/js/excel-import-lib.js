@@ -30,6 +30,9 @@
         this.messages = this.config.messages || {};
         this.container = document.getElementById(this.config.containerId);
         this.hiddenInput = document.querySelector('input.excel-import-input[name="' + this.config.fieldName + '"]');
+        this.fileNameInput = this.config.fileNameField
+            ? document.querySelector('input.excel-import-filename[name="' + this.config.fileNameField + '"]')
+            : null;
         this.fileInput = null;
     }
 
@@ -47,16 +50,30 @@
             return;
         }
         this.bindEvents();
-        // Restore preview from an existing value (edit mode).
+        // Restore from an existing value: an edit (data rebuilt from stored records) or a
+        // validation reload (the submitted rows round-tripped in the hidden field).
         var existing = this.hiddenInput ? this.hiddenInput.value : "";
         if (existing && existing.trim()) {
             try {
                 var rows = JSON.parse(existing);
                 if (rows && rows.length) {
+                    // Restore the file bar (name + Retirer) when the file name was carried through,
+                    // since the browser cannot repopulate the file input itself.
+                    var savedName = this.fileNameInput ? this.fileNameInput.value : "";
+                    if (savedName) {
+                        this.showFileBar(savedName);
+                    }
                     this.process(rows, null);
                 }
             } catch (e) { /* ignore malformed existing value */ }
         }
+    };
+
+    /** Switch the widget to the "file selected" state: hide the drop zone, show the file bar. */
+    ExcelImport.prototype.showFileBar = function (name) {
+        this.dropzone.classList.add("ei-hidden");
+        this.filebar.classList.add("active");
+        this.filebar.querySelector(".ei-fname").textContent = name;
     };
 
     /** Cache references to the widget elements rendered server-side in the FTL template. */
@@ -110,6 +127,9 @@
         if (this.hiddenInput) {
             this.hiddenInput.value = "";
         }
+        if (this.fileNameInput) {
+            this.fileNameInput.value = "";
+        }
         if (this.fileInput) {
             this.fileInput.value = "";
         }
@@ -142,9 +162,11 @@
             return;
         }
 
-        this.dropzone.classList.add("ei-hidden");
-        this.filebar.classList.add("active");
-        this.filebar.querySelector(".ei-fname").textContent = file.name;
+        this.showFileBar(file.name);
+        // Persist the name so it round-trips and the file bar can be restored on a validation reload.
+        if (this.fileNameInput) {
+            this.fileNameInput.value = file.name;
+        }
 
         var reader = new FileReader();
         reader.onload = function (e) {
@@ -207,7 +229,8 @@
             errors.push(this.msg("missingHeaders", missing.join(", ")));
             this.showError(errors);
             this.renderPreview(rows, {}, {});
-            this.clearData();
+            // Commit so the server also detects the missing headers (see commit() / process()).
+            this.commit(rows);
             this.summary(0, rows.length);
             return;
         }
@@ -257,25 +280,35 @@
 
         this.renderPreview(rows, badCells, rowDup, rowBad);
 
+        // Always commit the parsed rows -- even when invalid -- so the data round-trips with the
+        // submission. This keeps the file/preview from being lost on a validation reload and lets
+        // the server-side selfValidate (which mirrors these checks) report the specific errors
+        // (missing headers, required cells, duplicates) instead of a generic "required".
+        this.commit(rows);
         if (errors.length) {
             this.showError(errors);
-            this.clearData();
             this.summary(0, rows.length);
         } else {
             this.hideError();
-            this.commit(rows);
             this.summary(rows.length, rows.length);
         }
     };
 
-    /** Write the validated rows (keyed by Excel header) to the hidden field. */
+    /**
+     * Write the parsed rows (keyed by Excel header) to the hidden field.
+     *
+     * Only headers actually present in the row are written: fabricating absent headers with an
+     * empty default would hide a missing column from the server-side missing-header check.
+     */
     ExcelImport.prototype.commit = function (rows) {
         if (!this.hiddenInput) { return; }
         var self = this;
         var payload = rows.map(function (row) {
             var obj = {};
             self.headers.forEach(function (h) {
-                obj[h] = self.cell(row, h);
+                if (self.hasHeader(row, h)) {
+                    obj[h] = self.cell(row, h);
+                }
             });
             return obj;
         });

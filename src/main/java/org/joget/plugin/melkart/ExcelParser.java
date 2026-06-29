@@ -3,10 +3,12 @@ package org.joget.plugin.melkart;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -179,6 +181,8 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         dataModel.put("value", value);
         dataModel.put("parentCarrierName", getParentCarrierName());
         dataModel.put("resolvedParentValue", parentValue != null ? parentValue : "");
+        dataModel.put("fileNameCarrierName", getFileNameCarrierName());
+        dataModel.put("fileName", resolveFileName(formData));
         dataModel.put("jsConfig", buildClientConfig());
         dataModel.put("dropzoneText", defaultStr(getPropertyString("dropzoneText"),
                 AppPluginUtil.getMessage("ExcelParser.dropzoneTextDefault", getClassName(), MESSAGES_PATH)));
@@ -354,6 +358,11 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
             return true;
         }
 
+        // Beyond "required", the back-end reports a single generic "invalid data" error for any
+        // failed check (bad JSON, missing headers, empty required cells, duplicates). The detailed,
+        // per-row breakdown is surfaced client-side by excel-import-lib.js.
+        String invalidMsg = customMsg("msgInvalidData", "ExcelParser.err.invalidData");
+
         List<Map<String, String>> columns = getColumns();
         boolean caseSensitive = "true".equalsIgnoreCase(getPropertyString("caseSensitiveHeaders"));
 
@@ -361,7 +370,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         try {
             arr = new JSONArray(value);
         } catch (Exception e) {
-            formData.addFormError(fieldId, customMsg("msgInvalidData", "ExcelParser.err.invalidData"));
+            formData.addFormError(fieldId, invalidMsg);
             return false;
         }
 
@@ -374,17 +383,12 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         }
 
         // 1. Header structure.
-        List<String> missingHeaders = new ArrayList<String>();
         JSONObject first = arr.optJSONObject(0);
         for (Map<String, String> col : columns) {
-            String header = col.get("excelHeader");
-            if (!hasKey(first, header, caseSensitive)) {
-                missingHeaders.add(header);
+            if (!hasKey(first, col.get("excelHeader"), caseSensitive)) {
+                formData.addFormError(fieldId, invalidMsg);
+                return false;
             }
-        }
-        if (!missingHeaders.isEmpty()) {
-            formData.addFormError(fieldId, format(customMsg("msgMissingHeaders", "ExcelParser.err.missingHeaders"), join(missingHeaders, ", "), ""));
-            return false;
         }
 
         // 2. Required cells across the flagged columns.
@@ -393,16 +397,12 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
                 continue;
             }
             String header = col.get("excelHeader");
-            List<String> badRows = new ArrayList<String>();
             for (int i = 0; i < arr.length(); i++) {
                 String cell = getCell(arr.optJSONObject(i), header, caseSensitive);
                 if (cell == null || cell.trim().isEmpty()) {
-                    badRows.add(String.valueOf(i + 1));
+                    formData.addFormError(fieldId, invalidMsg);
+                    return false;
                 }
-            }
-            if (!badRows.isEmpty()) {
-                formData.addFormError(fieldId, format(customMsg("msgRequiredCell", "ExcelParser.err.requiredCell"), header, join(badRows, ", ")));
-                return false;
             }
         }
 
@@ -414,31 +414,20 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
             }
         }
         if (!uniqueHeaders.isEmpty()) {
-            Map<String, Integer> seen = new LinkedHashMap<String, Integer>();
-            List<String> dupRows = new ArrayList<String>();
+            Set<String> seen = new HashSet<String>();
             for (int i = 0; i < arr.length(); i++) {
-                JSONObject obj = arr.optJSONObject(i);
-                String key = compositeKey(obj, uniqueHeaders, caseSensitive);
-                if (seen.containsKey(key)) {
-                    dupRows.add(String.valueOf(i + 1));
-                } else {
-                    seen.put(key, i);
+                String key = compositeKey(arr.optJSONObject(i), uniqueHeaders, caseSensitive);
+                if (!seen.add(key)) {
+                    formData.addFormError(fieldId, invalidMsg);
+                    return false;
                 }
-            }
-            if (!dupRows.isEmpty()) {
-                formData.addFormError(fieldId, format(customMsg("msgDuplicate", "ExcelParser.err.duplicate"), join(uniqueHeaders, " + "), join(dupRows, ", ")));
-                return false;
             }
 
             // 4. Duplicate against existing records in the target table (optional).
             if ("true".equalsIgnoreCase(getPropertyString("checkExistingDuplicates"))) {
                 List<String> existingDupRows = findExistingDuplicates(arr, uniqueHeaders, columns, caseSensitive, formData);
-                if (existingDupRows == null) {
-                    formData.addFormError(fieldId, customMsg("msgInvalidData", "ExcelParser.err.invalidData"));
-                    return false;
-                }
-                if (!existingDupRows.isEmpty()) {
-                    formData.addFormError(fieldId, format(customMsg("msgExistingDuplicate", "ExcelParser.err.existingDuplicate"), join(uniqueHeaders, " + "), join(existingDupRows, ", ")));
+                if (existingDupRows == null || !existingDupRows.isEmpty()) {
+                    formData.addFormError(fieldId, invalidMsg);
                     return false;
                 }
             }
@@ -586,6 +575,27 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         return FormUtil.getElementParameterName(this) + "_resolvedParent";
     }
 
+    /**
+     * Name of the hidden field that carries the selected file name through the submission. A file
+     * input cannot be repopulated by the browser on a validation reload, but the parsed rows live
+     * in the (round-tripped) hidden value; carrying the name too lets the widget show the file bar
+     * ("name + Retirer") instead of the empty drop zone after the reload.
+     */
+    protected String getFileNameCarrierName() {
+        return FormUtil.getElementParameterName(this) + "_fileName";
+    }
+
+    /** @return the submitted file name carried through the request, or {@code ""} on a fresh load. */
+    protected String resolveFileName(FormData formData) {
+        if (formData != null) {
+            String name = formData.getRequestParameter(getFileNameCarrierName());
+            if (name != null && !name.trim().isEmpty()) {
+                return name.trim();
+            }
+        }
+        return "";
+    }
+
     /** @return the replace strategy: "parentId" (default) or "uniqueKeys". */
     protected String getReplaceStrategy() {
         String s = getPropertyString("replaceStrategy");
@@ -731,24 +741,6 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
             return custom;
         }
         return msg(defaultKey);
-    }
-
-    protected static String format(String template, String arg0, String arg1) {
-        if (template == null) {
-            return "";
-        }
-        return template.replace("{0}", arg0 == null ? "" : arg0).replace("{1}", arg1 == null ? "" : arg1);
-    }
-
-    protected static String join(List<String> items, String sep) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < items.size(); i++) {
-            if (i > 0) {
-                sb.append(sep);
-            }
-            sb.append(items.get(i));
-        }
-        return sb.toString();
     }
 
     protected static String defaultStr(String v, String def) {

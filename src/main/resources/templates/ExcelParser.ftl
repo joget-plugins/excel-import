@@ -45,6 +45,13 @@
         value="${resolvedParentValue!?html}"
         name="${parentCarrierName!}" />
 
+    <#-- Carries the selected file name through the submission so the file bar (name + Retirer) can
+         be restored on a validation reload, when the browser-cleared file input no longer has it. -->
+    <input type="hidden"
+        class="excel-import-filename"
+        value="${fileName!?html}"
+        name="${fileNameCarrierName!}" />
+
     <#if element.properties.readonly! != 'true'>
     <script type="text/javascript">
         (function () {
@@ -74,6 +81,7 @@
 
             var config = ${jsConfig!"{}"};
             config.fieldName = "${elementParamName!}";
+            config.fileNameField = "${fileNameCarrierName!}";
             config.containerId = "excel-import-${element.properties.id!}-${element.properties.elementUniqueKey!}";
 
             var start = function () {
