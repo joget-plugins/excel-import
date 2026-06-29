@@ -162,7 +162,6 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         String template = "ExcelParser.ftl";
 
         String parentValue = resolveParentValue(formData);
-        LogUtil.info(getClassName(), "Excel import render: parentColumn=" + getParentColumn() + ", parentValue=" + parentValue);
 
         // Current value: prefer a submitted (or failed-validation reload) value, otherwise
         // rebuild it from the existing child records so an edit/no-change re-submit is a no-op.

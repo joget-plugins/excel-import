@@ -107,8 +107,6 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
         FormDataDao formDataDao = (FormDataDao) AppUtil.getApplicationContext().getBean("formDataDao");
         String parentColumn = ep.getParentColumn();              // may be null when no link is configured
         String parentValue = ep.resolveParentValue(formData);    // may be null when no value resolves
-        LogUtil.info(getClassName(), "Excel import store: target=" + target.tableName
-                + ", parentColumn=" + parentColumn + ", parentValue=" + parentValue);
         boolean linkParent = parentColumn != null && parentValue != null && !parentValue.isEmpty();
 
         try {
