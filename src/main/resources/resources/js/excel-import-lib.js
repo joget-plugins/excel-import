@@ -29,6 +29,8 @@
         this.previewHeaders = this.config.previewHeaders || this.headers;
         this.requiredColumns = this.config.requiredColumns || [];
         this.uniqueColumns = this.config.uniqueColumns || [];
+        // Per-header cleansing rules: { type, defaultValue, dateFormat }.
+        this.coercion = this.config.coercion || {};
         this.caseSensitive = !!this.config.caseSensitive;
         this.messages = this.config.messages || {};
         this.container = document.getElementById(this.config.containerId);
@@ -221,10 +223,45 @@
         return false;
     };
 
+    /** Resolve the actual key present in the row for a configured header, or null when absent. */
+    ExcelImport.prototype.actualKey = function (row, header) {
+        if (row == null) { return null; }
+        if (Object.prototype.hasOwnProperty.call(row, header)) { return header; }
+        if (!this.caseSensitive) {
+            var keys = Object.keys(row);
+            for (var i = 0; i < keys.length; i++) {
+                if (keys[i].toLowerCase() === String(header).toLowerCase()) { return keys[i]; }
+            }
+        }
+        return null;
+    };
+
+    /**
+     * Apply the configured cleansing rules to every mapped cell, in place. Absent headers are left
+     * untouched (so the missing-header check still fires); a default only fills a present-but-empty
+     * cell.
+     */
+    ExcelImport.prototype.coerceRows = function (rows) {
+        var self = this;
+        rows.forEach(function (row) {
+            self.headers.forEach(function (h) {
+                var rule = self.coercion[h];
+                if (!rule) { return; }
+                var key = self.actualKey(row, h);
+                if (key == null) { return; }
+                row[key] = coerceValue(row[key], rule);
+            });
+        });
+    };
+
     /** Validate, preview, and (when valid) commit the rows to the hidden field. */
     ExcelImport.prototype.process = function (rows, file) {
         var self = this;
         var errors = [];
+
+        // 0. Type coercion & cleansing (default value, then type coercion), applied in place so the
+        // preview, validation and committed JSON all agree. Mirrors ExcelImport.coerce server-side.
+        this.coerceRows(rows);
 
         // 1. Header structure.
         var missing = this.headers.filter(function (h) { return !self.hasHeader(rows[0], h); });
@@ -393,6 +430,99 @@
         this.errorBox.style.display = "none";
         this.errorBox.innerHTML = "";
     };
+
+    //
+    // ---- Type coercion & cleansing (mirrors ExcelImport.coerce on the server) ----
+    //
+
+    var TRUE_TOKENS = ["true", "1", "yes", "y", "oui", "o", "vrai", "x", "on"];
+    var FALSE_TOKENS = ["false", "0", "no", "n", "non", "faux", "off"];
+
+    /** Apply a single column's rule (default value, then type coercion) to a raw cell value. */
+    function coerceValue(raw, rule) {
+        var v = raw == null ? "" : String(raw);
+        if (!v && rule.defaultValue) { v = String(rule.defaultValue); }
+        if (!v) { return v; }
+        switch ((rule.type || "").toLowerCase()) {
+            case "number": return coerceNumber(v);
+            case "date": return coerceDate(v, rule.dateFormat);
+            case "boolean": return coerceBoolean(v);
+            default: return v;
+        }
+    }
+
+    /** "1,234.50" -> "1234.5"; best-effort, returns the original when unparseable. */
+    function coerceNumber(v) {
+        var s = String(v).trim().replace(/[^0-9,.\-]/g, "");
+        if (!s || s === "-") { return v; }
+        var hasComma = s.indexOf(",") >= 0, hasDot = s.indexOf(".") >= 0;
+        if (hasComma && hasDot) {
+            if (s.lastIndexOf(",") > s.lastIndexOf(".")) {
+                s = s.replace(/\./g, "").replace(",", ".");
+            } else {
+                s = s.replace(/,/g, "");
+            }
+        } else if (hasComma) {
+            // Lone comma: grouped thousands (1,000 / 1,234,567) vs. decimal separator (12,5).
+            if (/^-?\d{1,3}(,\d{3})+$/.test(s)) { s = s.replace(/,/g, ""); }
+            else { s = s.replace(",", "."); }
+        }
+        var n = Number(s);
+        if (isNaN(n)) { return v; }
+        return String(n);
+    }
+
+    function coerceBoolean(v) {
+        var s = String(v).trim().toLowerCase();
+        if (TRUE_TOKENS.indexOf(s) >= 0) { return "true"; }
+        if (FALSE_TOKENS.indexOf(s) >= 0) { return "false"; }
+        return v;
+    }
+
+    var ISO_DATE = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/;
+    var DMY_DATE = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/;
+
+    /** Excel serial / ISO / day-first date -> parts, or null when unrecognised. */
+    function parseDateParts(value) {
+        var s = String(value == null ? "" : value).trim();
+        if (!s) { return null; }
+        if (/^\d+(\.\d+)?$/.test(s)) {
+            var serial = parseFloat(s);
+            if (serial > 0 && serial < 2958466) {
+                var d = new Date(Math.round((serial - 25569) * 86400000));
+                return { y: d.getUTCFullYear(), mo: d.getUTCMonth() + 1, d: d.getUTCDate(),
+                         h: d.getUTCHours(), mi: d.getUTCMinutes(), s: d.getUTCSeconds() };
+            }
+        }
+        var m = s.match(ISO_DATE);
+        if (m) {
+            return { y: +m[1], mo: +m[2], d: +m[3], h: +(m[4] || 0), mi: +(m[5] || 0), s: +(m[6] || 0) };
+        }
+        m = s.match(DMY_DATE);
+        if (m) {
+            var yy = +m[3]; if (yy < 100) { yy += 2000; }
+            return { y: yy, mo: +m[2], d: +m[1], h: +(m[4] || 0), mi: +(m[5] || 0), s: +(m[6] || 0) };
+        }
+        return null;
+    }
+
+    function coerceDate(v, fmt) {
+        var p = parseDateParts(v);
+        if (!p) { return v; }
+        var f = (fmt && String(fmt).trim()) ? String(fmt).trim() : "yyyy-MM-dd";
+        return f.replace(/yyyy/g, pad(p.y, 4))
+                .replace(/MM/g, pad(p.mo, 2))
+                .replace(/dd/g, pad(p.d, 2))
+                .replace(/HH/g, pad(p.h, 2))
+                .replace(/mm/g, pad(p.mi, 2))
+                .replace(/ss/g, pad(p.s, 2));
+    }
+
+    function pad(n, width) {
+        var s = String(n);
+        while (s.length < width) { s = "0" + s; }
+        return s;
+    }
 
     function escapeHtml(s) {
         if (s == null) { return ""; }

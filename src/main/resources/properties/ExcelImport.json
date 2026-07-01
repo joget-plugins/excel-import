@@ -44,6 +44,16 @@
                         "label": "@@ExcelImport.col.fieldId@@"
                     },
                     {
+                        "key": "type",
+                        "label": "@@ExcelImport.col.type@@",
+                        "options": [
+                            { "value": "", "label": "@@ExcelImport.col.type.text@@" },
+                            { "value": "number", "label": "@@ExcelImport.col.type.number@@" },
+                            { "value": "date", "label": "@@ExcelImport.col.type.date@@" },
+                            { "value": "boolean", "label": "@@ExcelImport.col.type.boolean@@" }
+                        ]
+                    },
+                    {
                         "key": "required",
                         "label": "@@ExcelImport.col.required@@",
                         "options": [
@@ -58,6 +68,14 @@
                             { "value": "", "label": "@@ExcelImport.no@@" },
                             { "value": "true", "label": "@@ExcelImport.yes@@" }
                         ]
+                    },
+                    {
+                        "key": "defaultValue",
+                        "label": "@@ExcelImport.col.defaultValue@@"
+                    },
+                    {
+                        "key": "dateFormat",
+                        "label": "@@ExcelImport.col.dateFormat@@"
                     },
                     {
                         "key": "hideInPreview",

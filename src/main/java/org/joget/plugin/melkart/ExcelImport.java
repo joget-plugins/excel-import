@@ -200,6 +200,7 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             JSONObject mapping = new JSONObject();
             JSONArray requiredColumns = new JSONArray();
             JSONArray uniqueColumns = new JSONArray();
+            JSONObject coercion = new JSONObject();
             for (Map<String, String> col : columns) {
                 String header = col.get("excelHeader");
                 headers.put(header);
@@ -213,6 +214,10 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
                 if ("true".equalsIgnoreCase(col.get("uniqueKey"))) {
                     uniqueColumns.put(header);
                 }
+                JSONObject rule = coercionRule(col);
+                if (rule != null) {
+                    coercion.put(header, rule);
+                }
             }
 
             cfg.put("elementId", getPropertyString("id"));
@@ -221,6 +226,7 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             cfg.put("mapping", mapping);
             cfg.put("requiredColumns", requiredColumns);
             cfg.put("uniqueColumns", uniqueColumns);
+            cfg.put("coercion", coercion);
             cfg.put("caseSensitive", "true".equalsIgnoreCase(getPropertyString("caseSensitiveHeaders")));
             cfg.put("required", "true".equalsIgnoreCase(getPropertyString("required")));
             cfg.put("maxFileSizeMB", parseDouble(getPropertyString("maxFileSizeMB"), 5));
@@ -271,7 +277,7 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
                     if (fieldId == null || fieldId.isEmpty()) {
                         continue;
                     }
-                    row.setProperty(fieldId, getCell(obj, header, caseSensitive));
+                    row.setProperty(fieldId, coerce(getCell(obj, header, caseSensitive), col));
                 }
                 rowSet.add(row);
             }
@@ -400,7 +406,7 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             }
             String header = col.get("excelHeader");
             for (int i = 0; i < arr.length(); i++) {
-                String cell = getCell(arr.optJSONObject(i), header, caseSensitive);
+                String cell = coerce(getCell(arr.optJSONObject(i), header, caseSensitive), col);
                 if (cell == null || cell.trim().isEmpty()) {
                     formData.addFormError(fieldId, invalidMsg);
                     return false;
@@ -409,16 +415,16 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
         }
 
         // 3. Composite duplicate key across the flagged columns (within the file).
-        List<String> uniqueHeaders = new ArrayList<String>();
+        List<Map<String, String>> uniqueCols = new ArrayList<Map<String, String>>();
         for (Map<String, String> col : columns) {
             if ("true".equalsIgnoreCase(col.get("uniqueKey"))) {
-                uniqueHeaders.add(col.get("excelHeader"));
+                uniqueCols.add(col);
             }
         }
-        if (!uniqueHeaders.isEmpty()) {
+        if (!uniqueCols.isEmpty()) {
             Set<String> seen = new HashSet<String>();
             for (int i = 0; i < arr.length(); i++) {
-                String key = compositeKey(arr.optJSONObject(i), uniqueHeaders, caseSensitive);
+                String key = compositeKey(arr.optJSONObject(i), uniqueCols, caseSensitive);
                 if (!seen.add(key)) {
                     formData.addFormError(fieldId, invalidMsg);
                     return false;
@@ -427,7 +433,7 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
 
             // 4. Duplicate against existing records in the target table (optional).
             if ("true".equalsIgnoreCase(getPropertyString("checkExistingDuplicates"))) {
-                List<String> existingDupRows = findExistingDuplicates(arr, uniqueHeaders, columns, caseSensitive, formData);
+                List<String> existingDupRows = findExistingDuplicates(arr, columns, caseSensitive, formData);
                 if (existingDupRows == null || !existingDupRows.isEmpty()) {
                     formData.addFormError(fieldId, invalidMsg);
                     return false;
@@ -441,7 +447,7 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
     /**
      * @return list of 1-based row numbers that already exist in the target table, or null on error.
      */
-    protected List<String> findExistingDuplicates(JSONArray arr, List<String> uniqueHeaders,
+    protected List<String> findExistingDuplicates(JSONArray arr,
             List<Map<String, String>> columns, boolean caseSensitive, FormData formData) {
         StorageTarget target = resolveStorageTarget();
         if (target == null) {
@@ -457,12 +463,14 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             // (no field id, e.g. a preview-only column) cannot be queried against the table, so
             // skip it here; the in-file duplicate check above still covers it.
             Map<String, String> headerToField = new LinkedHashMap<String, String>();
+            Map<String, Map<String, String>> headerToCol = new LinkedHashMap<String, Map<String, String>>();
             List<String> storedUniqueHeaders = new ArrayList<String>();
             for (Map<String, String> col : columns) {
                 if ("true".equalsIgnoreCase(col.get("uniqueKey"))) {
                     String fieldId = col.get("fieldId");
                     if (fieldId != null && !fieldId.isEmpty()) {
                         headerToField.put(col.get("excelHeader"), fieldId);
+                        headerToCol.put(col.get("excelHeader"), col);
                         storedUniqueHeaders.add(col.get("excelHeader"));
                     }
                 }
@@ -483,7 +491,7 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
                         condition.append(" AND ");
                     }
                     condition.append("e.customProperties.").append(headerToField.get(header)).append(" = ?");
-                    params.add(getCell(obj, header, caseSensitive));
+                    params.add(coerce(getCell(obj, header, caseSensitive), headerToCol.get(header)));
                     firstCond = false;
                 }
                 // Ignore the rows belonging to the current parent (they are being replaced).
@@ -530,6 +538,9 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
                     col.put("required", raw.get("required") != null ? raw.get("required").toString() : "");
                     col.put("uniqueKey", raw.get("uniqueKey") != null ? raw.get("uniqueKey").toString() : "");
                     col.put("hideInPreview", raw.get("hideInPreview") != null ? raw.get("hideInPreview").toString() : "");
+                    col.put("type", raw.get("type") != null ? raw.get("type").toString().trim() : "");
+                    col.put("defaultValue", raw.get("defaultValue") != null ? raw.get("defaultValue").toString() : "");
+                    col.put("dateFormat", raw.get("dateFormat") != null ? raw.get("dateFormat").toString().trim() : "");
                     result.add(col);
                 }
             }
@@ -728,16 +739,206 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
         return false;
     }
 
-    protected static String compositeKey(JSONObject obj, List<String> headers, boolean caseSensitive) {
+    protected static String compositeKey(JSONObject obj, List<Map<String, String>> cols, boolean caseSensitive) {
         StringBuilder sb = new StringBuilder();
-        for (String h : headers) {
-            String v = getCell(obj, h, caseSensitive);
+        for (Map<String, String> col : cols) {
+            String v = coerce(getCell(obj, col.get("excelHeader"), caseSensitive), col);
             if (!caseSensitive && v != null) {
                 v = v.toLowerCase();
             }
             sb.append(v == null ? "" : v.trim()).append("");
         }
         return sb.toString();
+    }
+
+    //
+    // ---- Column type coercion & cleansing ----
+    //
+    // Applied identically on the client (excel-import-lib.js) so the preview, the committed JSON
+    // and what is stored/validated all agree. Coercion is best-effort: a value that cannot be
+    // parsed for the requested type is left untouched rather than blanked, so a downstream
+    // validation (or the user) can still see the offending input.
+
+    /**
+     * Builds the per-column coercion rule handed to the client, or {@code null} when the column
+     * requests no cleansing (so the client config stays small for the common no-op case).
+     */
+    protected JSONObject coercionRule(Map<String, String> col) {
+        String type = col.get("type");
+        String def = col.get("defaultValue");
+        String dateFormat = col.get("dateFormat");
+
+        boolean hasType = type != null && !type.isEmpty() && !"text".equalsIgnoreCase(type);
+        boolean hasDefault = def != null && !def.isEmpty();
+        if (!hasType && !hasDefault) {
+            return null;
+        }
+        JSONObject rule = new JSONObject();
+        rule.put("type", type == null ? "" : type);
+        rule.put("defaultValue", def == null ? "" : def);
+        rule.put("dateFormat", dateFormat == null ? "" : dateFormat);
+        return rule;
+    }
+
+    /** Applies the column's cleansing rules (default value, then type coercion) to a single cell value. */
+    protected static String coerce(String raw, Map<String, String> col) {
+        if (col == null) {
+            return raw == null ? "" : raw;
+        }
+        String type = col.get("type");
+        String def = col.get("defaultValue");
+        String dateFormat = col.get("dateFormat");
+
+        String v = raw == null ? "" : raw;
+        if (v.isEmpty() && def != null && !def.isEmpty()) {
+            v = def;
+        }
+        if (v.isEmpty()) {
+            return v;
+        }
+        if ("number".equalsIgnoreCase(type)) {
+            return coerceNumber(v);
+        }
+        if ("date".equalsIgnoreCase(type)) {
+            return coerceDate(v, dateFormat);
+        }
+        if ("boolean".equalsIgnoreCase(type)) {
+            return coerceBoolean(v);
+        }
+        return v;
+    }
+
+    /**
+     * Normalises a numeric string: strips currency/spaces, resolves thousands vs decimal
+     * separators, and emits a canonical plain number ({@code "1,234.50"} -> {@code "1234.5"}).
+     * When both {@code ,} and {@code .} occur, the last one is taken as the decimal separator.
+     * A lone {@code ,} is read as grouped thousands when it forms {@code 1,000} / {@code 1,234,567},
+     * otherwise as a decimal separator (European style, e.g. {@code 12,5}).
+     */
+    protected static String coerceNumber(String v) {
+        String s = v.trim().replaceAll("[^0-9,.\\-]", "");
+        if (s.isEmpty() || "-".equals(s)) {
+            return v;
+        }
+        boolean hasComma = s.indexOf(',') >= 0;
+        boolean hasDot = s.indexOf('.') >= 0;
+        if (hasComma && hasDot) {
+            if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+                s = s.replace(".", "").replace(',', '.');
+            } else {
+                s = s.replace(",", "");
+            }
+        } else if (hasComma) {
+            // Lone comma: grouped thousands (1,000 / 1,234,567) vs. decimal separator (12,5).
+            if (s.matches("-?\\d{1,3}(,\\d{3})+")) {
+                s = s.replace(",", "");
+            } else {
+                s = s.replace(',', '.');
+            }
+        }
+        try {
+            java.math.BigDecimal bd = new java.math.BigDecimal(s);
+            if (bd.compareTo(java.math.BigDecimal.ZERO) == 0) {
+                return "0";
+            }
+            return bd.stripTrailingZeros().toPlainString();
+        } catch (NumberFormatException e) {
+            return v;
+        }
+    }
+
+    /** Maps common truthy/falsy tokens to {@code "true"}/{@code "false"}; leaves anything else as-is. */
+    protected static String coerceBoolean(String v) {
+        String s = v.trim().toLowerCase();
+        if (TRUE_TOKENS.contains(s)) {
+            return "true";
+        }
+        if (FALSE_TOKENS.contains(s)) {
+            return "false";
+        }
+        return v;
+    }
+
+    private static final Set<String> TRUE_TOKENS = new HashSet<String>(java.util.Arrays.asList(
+            "true", "1", "yes", "y", "oui", "o", "vrai", "x", "on"));
+    private static final Set<String> FALSE_TOKENS = new HashSet<String>(java.util.Arrays.asList(
+            "false", "0", "no", "n", "non", "faux", "off"));
+
+    // yyyy-MM-dd [THH:mm[:ss]]
+    private static final java.util.regex.Pattern ISO_DATE = java.util.regex.Pattern.compile(
+            "^(\\d{4})-(\\d{1,2})-(\\d{1,2})(?:[ T](\\d{1,2}):(\\d{1,2})(?::(\\d{1,2}))?)?");
+    // day-first dd/MM/yyyy (also - or . separators), matching the plugin's French locale
+    private static final java.util.regex.Pattern DMY_DATE = java.util.regex.Pattern.compile(
+            "^(\\d{1,2})[/\\-.](\\d{1,2})[/\\-.](\\d{2,4})(?:[ T](\\d{1,2}):(\\d{1,2})(?::(\\d{1,2}))?)?");
+
+    /**
+     * Parses an Excel serial number or a supported date string into
+     * {@code [year, month, day, hour, minute, second]}, or {@code null} when unrecognised.
+     * Supported: Excel serials (1900 date system), ISO {@code yyyy-MM-dd}, and day-first
+     * {@code dd/MM/yyyy}.
+     */
+    protected static int[] parseDateParts(String value) {
+        if (value == null) {
+            return null;
+        }
+        String s = value.trim();
+        if (s.isEmpty()) {
+            return null;
+        }
+        if (s.matches("\\d+(\\.\\d+)?")) {
+            double serial = Double.parseDouble(s);
+            // Plausible Excel serial range: 1900-01-01 .. 9999-12-31.
+            if (serial > 0 && serial < 2958466) {
+                long ms = Math.round((serial - 25569) * 86400000.0);
+                java.util.Calendar c = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+                c.setTimeInMillis(ms);
+                return new int[]{c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH) + 1,
+                        c.get(java.util.Calendar.DAY_OF_MONTH), c.get(java.util.Calendar.HOUR_OF_DAY),
+                        c.get(java.util.Calendar.MINUTE), c.get(java.util.Calendar.SECOND)};
+            }
+        }
+        java.util.regex.Matcher m = ISO_DATE.matcher(s);
+        if (m.find()) {
+            return new int[]{parseInt(m.group(1)), parseInt(m.group(2)), parseInt(m.group(3)),
+                    parseInt(m.group(4)), parseInt(m.group(5)), parseInt(m.group(6))};
+        }
+        m = DMY_DATE.matcher(s);
+        if (m.find()) {
+            int year = parseInt(m.group(3));
+            if (year < 100) {
+                year += 2000;
+            }
+            return new int[]{year, parseInt(m.group(2)), parseInt(m.group(1)),
+                    parseInt(m.group(4)), parseInt(m.group(5)), parseInt(m.group(6))};
+        }
+        return null;
+    }
+
+    /** Formats a parsed date to the given pattern (default {@code yyyy-MM-dd}); tokens yyyy MM dd HH mm ss. */
+    protected static String coerceDate(String v, String fmt) {
+        int[] p = parseDateParts(v);
+        if (p == null) {
+            return v;
+        }
+        String f = (fmt == null || fmt.trim().isEmpty()) ? "yyyy-MM-dd" : fmt.trim();
+        return f.replace("yyyy", pad(p[0], 4))
+                .replace("MM", pad(p[1], 2))
+                .replace("dd", pad(p[2], 2))
+                .replace("HH", pad(p[3], 2))
+                .replace("mm", pad(p[4], 2))
+                .replace("ss", pad(p[5], 2));
+    }
+
+    private static int parseInt(String s) {
+        return (s == null || s.isEmpty()) ? 0 : Integer.parseInt(s);
+    }
+
+    private static String pad(int n, int width) {
+        String s = Integer.toString(n);
+        while (s.length() < width) {
+            s = "0" + s;
+        }
+        return s;
     }
 
     protected String msg(String key) {
