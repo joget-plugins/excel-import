@@ -24,6 +24,9 @@
     function ExcelImport(config) {
         this.config = config || {};
         this.headers = this.config.headers || [];
+        // Columns shown in the preview table. A column can be present in `headers` (read from
+        // the file, validated and/or stored) yet omitted here to keep it out of the preview.
+        this.previewHeaders = this.config.previewHeaders || this.headers;
         this.requiredColumns = this.config.requiredColumns || [];
         this.uniqueColumns = this.config.uniqueColumns || [];
         this.caseSensitive = !!this.config.caseSensitive;
@@ -287,7 +290,13 @@
         this.commit(rows);
         if (errors.length) {
             this.showError(errors);
-            this.summary(0, rows.length);
+            // Count the rows that actually failed a per-row check (empty required cell or
+            // duplicate) so the summary reflects how many rows are still valid, e.g. "17 / 19".
+            var invalid = 0;
+            for (var i = 0; i < rows.length; i++) {
+                if (rowBad[i] || rowDup[i]) { invalid++; }
+            }
+            this.summary(rows.length - invalid, rows.length);
         } else {
             this.hideError();
             this.summary(rows.length, rows.length);
@@ -345,13 +354,13 @@
         var maxH = parseInt(this.config.previewHeight, 10) || 400;
 
         var thead = "<tr><th class='excel-import-rownum'>#</th>" +
-            this.headers.map(function (h) { return "<th>" + escapeHtml(h) + "</th>"; }).join("") + "</tr>";
+            this.previewHeaders.map(function (h) { return "<th>" + escapeHtml(h) + "</th>"; }).join("") + "</tr>";
 
         var tbody = rows.map(function (row, i) {
             var cls = "";
             if (rowBad[i]) { cls = "ei-row-bad"; }
             else if (rowDup[i]) { cls = "ei-row-dup"; }
-            var tds = self.headers.map(function (h, idx) {
+            var tds = self.previewHeaders.map(function (h, idx) {
                 var cellCls = (badCells[i] && badCells[i][h]) ? " class='ei-cell-bad'" : "";
                 var val = escapeHtml(self.cell(row, h));
                 var chip = "";

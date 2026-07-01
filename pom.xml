@@ -4,7 +4,7 @@
     <groupId>org.joget.plugin.melkart</groupId>
     <artifactId>excel-parser</artifactId>
     <packaging>bundle</packaging>
-    <version>1.2-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>excel-parser</name>
     <url>http://www.joget.org</url>
     <build>
@@ -80,11 +80,7 @@
             <scope>provided</scope>
         </dependency>
         <!-- Change plugin specific dependencies here -->
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>jsp-api</artifactId>
-            <version>2.0</version>
-        </dependency>
+       
         <!-- End change plugin specific dependencies here -->
     </dependencies>
     <distributionManagement>

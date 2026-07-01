@@ -1,7 +1,7 @@
 <#assign base = "${request.contextPath}/plugin/org.joget.plugin.melkart.ExcelParser/">
 <link rel="stylesheet" type="text/css" href="${base}css/excel-import.css" />
 
-<div class="form-cell<#if element.properties.fullWidth! == 'true'> excel-import-fullwidth</#if>" ${elementMetaData!}>
+<div class="form-cell<#if element.properties.fullWidth! == 'true'> excel-import-fullwidth</#if>" data-ei-cell-id="${element.properties.id!}" ${elementMetaData!}>
     <#if element.properties.label?? && element.properties.label?has_content>
         <label class="label" field-tooltip="${elementParamName!}">${element.properties.label} <span class="form-cell-validator">${decoration!}</span><#if error??> <span class="form-error-message">${error}</span></#if></label>
     <#elseif error??>
@@ -85,6 +85,20 @@
             config.containerId = "excel-import-${element.properties.id!}-${element.properties.elementUniqueKey!}";
 
             var start = function () {
+                // The form builder re-renders and *appends* this element's markup every time the
+                // properties are applied (the container id carries a fresh elementUniqueKey each
+                // render), which stacks duplicate drop zones. Remove any earlier render of this same
+                // element (matched by its stable id) so only the current one remains.
+                var current = document.getElementById(config.containerId);
+                var cell = current && current.closest ? current.closest(".form-cell") : null;
+                if (cell) {
+                    var dups = document.querySelectorAll('.form-cell[data-ei-cell-id="' + config.elementId + '"]');
+                    for (var i = 0; i < dups.length; i++) {
+                        if (dups[i] !== cell && dups[i].parentNode) {
+                            dups[i].parentNode.removeChild(dups[i]);
+                        }
+                    }
+                }
                 ensureLibs(function () {
                     if (typeof window.initExcelImport === "function") {
                         window.initExcelImport(config);

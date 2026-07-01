@@ -10,8 +10,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.joget.apps.app.model.AppDefinition;
 import org.joget.apps.app.service.AppPluginUtil;
 import org.joget.apps.app.service.AppService;
@@ -30,7 +28,6 @@ import org.joget.apps.form.model.FormRowSet;
 import org.joget.apps.form.model.FormStoreBinder;
 import org.joget.apps.form.service.FormUtil;
 import org.joget.commons.util.LogUtil;
-import org.joget.workflow.util.WorkflowUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -199,12 +196,16 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
             List<Map<String, String>> columns = getColumns();
 
             JSONArray headers = new JSONArray();
+            JSONArray previewHeaders = new JSONArray();
             JSONObject mapping = new JSONObject();
             JSONArray requiredColumns = new JSONArray();
             JSONArray uniqueColumns = new JSONArray();
             for (Map<String, String> col : columns) {
                 String header = col.get("excelHeader");
                 headers.put(header);
+                if (!"true".equalsIgnoreCase(col.get("hideInPreview"))) {
+                    previewHeaders.put(header);
+                }
                 mapping.put(header, col.get("fieldId"));
                 if ("true".equalsIgnoreCase(col.get("required"))) {
                     requiredColumns.put(header);
@@ -216,6 +217,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
 
             cfg.put("elementId", getPropertyString("id"));
             cfg.put("headers", headers);
+            cfg.put("previewHeaders", previewHeaders);
             cfg.put("mapping", mapping);
             cfg.put("requiredColumns", requiredColumns);
             cfg.put("uniqueColumns", uniqueColumns);
@@ -451,12 +453,23 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
             String parentValue = resolveParentValue(formData);
             boolean excludeParent = parentColumn != null && parentValue != null && !parentValue.isEmpty();
 
-            // Map unique Excel headers -> target field ids.
+            // Map unique Excel headers -> target field ids. A unique column that is not stored
+            // (no field id, e.g. a preview-only column) cannot be queried against the table, so
+            // skip it here; the in-file duplicate check above still covers it.
             Map<String, String> headerToField = new LinkedHashMap<String, String>();
+            List<String> storedUniqueHeaders = new ArrayList<String>();
             for (Map<String, String> col : columns) {
                 if ("true".equalsIgnoreCase(col.get("uniqueKey"))) {
-                    headerToField.put(col.get("excelHeader"), col.get("fieldId"));
+                    String fieldId = col.get("fieldId");
+                    if (fieldId != null && !fieldId.isEmpty()) {
+                        headerToField.put(col.get("excelHeader"), fieldId);
+                        storedUniqueHeaders.add(col.get("excelHeader"));
+                    }
                 }
+            }
+            // No stored unique column to query against: nothing can be an existing duplicate.
+            if (storedUniqueHeaders.isEmpty()) {
+                return new ArrayList<String>();
             }
 
             List<String> dupRows = new ArrayList<String>();
@@ -465,7 +478,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
                 StringBuilder condition = new StringBuilder(" WHERE ");
                 List<Object> params = new ArrayList<Object>();
                 boolean firstCond = true;
-                for (String header : uniqueHeaders) {
+                for (String header : storedUniqueHeaders) {
                     if (!firstCond) {
                         condition.append(" AND ");
                     }
@@ -516,6 +529,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
                     col.put("fieldId", raw.get("fieldId") != null ? raw.get("fieldId").toString().trim() : "");
                     col.put("required", raw.get("required") != null ? raw.get("required").toString() : "");
                     col.put("uniqueKey", raw.get("uniqueKey") != null ? raw.get("uniqueKey").toString() : "");
+                    col.put("hideInPreview", raw.get("hideInPreview") != null ? raw.get("hideInPreview").toString() : "");
                     result.add(col);
                 }
             }

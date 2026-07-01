@@ -41,8 +41,7 @@
                     },
                     {
                         "key": "fieldId",
-                        "label": "@@ExcelParser.col.fieldId@@",
-                        "required": "True"
+                        "label": "@@ExcelParser.col.fieldId@@"
                     },
                     {
                         "key": "required",
@@ -55,6 +54,14 @@
                     {
                         "key": "uniqueKey",
                         "label": "@@ExcelParser.col.uniqueKey@@",
+                        "options": [
+                            { "value": "", "label": "@@ExcelParser.no@@" },
+                            { "value": "true", "label": "@@ExcelParser.yes@@" }
+                        ]
+                    },
+                    {
+                        "key": "hideInPreview",
+                        "label": "@@ExcelParser.col.hideInPreview@@",
                         "options": [
                             { "value": "", "label": "@@ExcelParser.no@@" },
                             { "value": "true", "label": "@@ExcelParser.yes@@" }
