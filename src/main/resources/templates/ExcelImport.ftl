@@ -12,9 +12,9 @@
         <div class="excel-import-widget form-fileupload" id="excel-import-${element.properties.id!}-${element.properties.elementUniqueKey!}">
             <div class="excel-import-dropzone">
                 <span class="ei-icon">&#128228;</span>
-                <span class="ei-text">${dropzoneText!"Choisir ou déposer un fichier Excel ici"}</span>
-                <span class="ei-hint">.xlsx, .xls</span>
-                <input type="file" accept=".xlsx,.xls" style="display:none" />
+                <span class="ei-text">${dropzoneText!"Choisir ou déposer un fichier Excel ou CSV ici"}</span>
+                <span class="ei-hint">.xlsx, .xls, .csv</span>
+                <input type="file" accept=".xlsx,.xls,.csv,text/csv" style="display:none" />
             </div>
             <div class="excel-import-filebar form-fileupload">
                 <span class="ei-fname"></span>

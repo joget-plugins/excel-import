@@ -3,7 +3,7 @@
  *
  * Wires up the import widget whose markup is rendered server-side in ExcelImport.ftl
  * (drop zone, file bar, error/summary/preview containers) and styled by excel-import.css.
- * It parses the selected .xlsx/.xls client-side with the bundled SheetJS (XLSX),
+ * It parses the selected .xlsx/.xls/.csv client-side with the bundled SheetJS (XLSX),
  * validates (required headers, required cells across columns, composite duplicate
  * key across columns), previews the data, and writes the validated rows -- as a
  * JSON array keyed by Excel header -- into the element's hidden input.
@@ -18,8 +18,8 @@
         return;
     }
 
-    // Only Excel files are permitted.
-    var ACCEPTED_EXT = [".xlsx", ".xls"];
+    // Excel and CSV files are permitted (SheetJS auto-detects and parses CSV too).
+    var ACCEPTED_EXT = [".xlsx", ".xls", ".csv"];
 
     function ExcelImport(config) {
         this.config = config || {};
