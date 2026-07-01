@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.joget.apps.app.service.AppService;
 import org.joget.apps.app.service.AppUtil;
 import org.joget.apps.form.dao.FormDataDao;
 import org.joget.apps.form.model.Element;
@@ -127,25 +128,13 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
             }
 
             if (rows != null && !rows.isEmpty()) {
-                Date now = new Date();
-                String user = WorkflowUtil.getCurrentUsername();
                 for (FormRow row : rows) {
-                    if (row.getId() == null || row.getId().isEmpty()) {
-                        row.setId(UuidGenerator.getInstance().getUuid());
-                    }
                     if (linkParent) {
                         row.setProperty(parentColumn, parentValue);
                     }
-                    if (row.getDateCreated() == null) {
-                        row.setDateCreated(now);
-                    }
-                    row.setDateModified(now);
-                    if (row.getCreatedBy() == null) {
-                        row.setCreatedBy(user);
-                    }
-                    row.setModifiedBy(user);
                 }
-                formDataDao.saveOrUpdate(target.formDefId, target.tableName, rows);
+                AppService appService = (AppService) AppUtil.getApplicationContext().getBean("appService");
+                appService.storeFormData(target.formDefId, target.tableName, rows, null);
             }
         } catch (Exception e) {
             LogUtil.error(getClassName(), e, "Error storing Excel import rows to " + target.tableName);
