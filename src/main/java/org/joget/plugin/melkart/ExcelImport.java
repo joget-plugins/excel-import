@@ -228,6 +228,10 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             cfg.put("uniqueColumns", uniqueColumns);
             cfg.put("coercion", coercion);
             cfg.put("caseSensitive", "true".equalsIgnoreCase(getPropertyString("caseSensitiveHeaders")));
+            // CSV parsing overrides (ignored for .xlsx/.xls). Empty delimiter = auto-detect;
+            // empty quote = the default double-quote.
+            cfg.put("csvDelimiter", getPropertyStringOrDefault("csvDelimiter", ""));
+            cfg.put("csvQuote", getPropertyStringOrDefault("csvQuote", ""));
             cfg.put("required", "true".equalsIgnoreCase(getPropertyString("required")));
             cfg.put("maxFileSizeMB", parseDouble(getPropertyString("maxFileSizeMB"), 5));
             cfg.put("previewHeight", defaultStr(getPropertyString("previewHeight"), "400"));

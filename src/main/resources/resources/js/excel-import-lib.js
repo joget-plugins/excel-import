@@ -176,9 +176,7 @@
         var reader = new FileReader();
         reader.onload = function (e) {
             try {
-                var wb = XLSX.read(e.target.result, { type: "array", cellDates: true, raw: false });
-                var sheet = wb.Sheets[wb.SheetNames[0]];
-                var rows = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
+                var rows = self.parseFile(name, e.target.result);
                 if (!rows || !rows.length) {
                     self.showError([self.msg("emptyFile")]);
                     self.clearData();
@@ -195,6 +193,34 @@
             self.clearData();
         };
         reader.readAsArrayBuffer(file);
+    };
+
+    /**
+     * Parse the selected file into an array of row objects keyed by header.
+     *
+     * Excel workbooks -- and standard (double-quoted) CSV -- are parsed by SheetJS. A custom CSV
+     * delimiter is passed through as SheetJS's field separator (FS). SheetJS has no option for a
+     * custom quote character, so a CSV configured with a non-default quote is tokenised by our own
+     * delimiter/quote-aware parser first, then handed back to SheetJS (via aoa_to_sheet) so the
+     * rest of the pipeline -- header disambiguation, sheet_to_json -- is identical either way.
+     */
+    ExcelImport.prototype.parseFile = function (lowerName, buffer) {
+        var isCsv = lowerName.slice(-4) === ".csv";
+        var delim = isCsv ? resolveDelimiter(this.config.csvDelimiter) : "";
+        var quote = isCsv ? resolveQuote(this.config.csvQuote) : "";
+
+        var sheet;
+        if (isCsv && quote && quote !== '"') {
+            var text = decodeText(buffer);
+            var aoa = parseDelimited(text, delim || guessDelimiter(text), quote);
+            sheet = XLSX.utils.aoa_to_sheet(aoa);
+        } else {
+            var opts = { type: "array", cellDates: true, raw: false };
+            if (delim) { opts.FS = delim; }
+            var wb = XLSX.read(buffer, opts);
+            sheet = wb.Sheets[wb.SheetNames[0]];
+        }
+        return XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
     };
 
     /** Read a cell from a parsed row by header, honouring case sensitivity. */
@@ -532,6 +558,85 @@
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#39;");
+    }
+
+    //
+    // ---- CSV parsing helpers (custom delimiter / quote character) ----
+    //
+
+    /** Resolve the configured CSV delimiter to a single character; "" means auto-detect. */
+    function resolveDelimiter(cfg) {
+        var d = cfg == null ? "" : String(cfg);
+        if (d === "\\t" || d.toLowerCase() === "tab") { return "\t"; }
+        return d.length ? d.charAt(0) : "";
+    }
+
+    /** Resolve the configured CSV quote character to a single character; "" means the default ("). */
+    function resolveQuote(cfg) {
+        var q = cfg == null ? "" : String(cfg);
+        return q.length ? q.charAt(0) : "";
+    }
+
+    /** Best-effort delimiter guess from the first line: the most frequent of , ; tab |. */
+    function guessDelimiter(text) {
+        var nl = text.search(/[\r\n]/);
+        var line = nl >= 0 ? text.slice(0, nl) : text;
+        var best = ",", bestCount = -1;
+        [",", ";", "\t", "|"].forEach(function (d) {
+            var count = line.split(d).length - 1;
+            if (count > bestCount) { bestCount = count; best = d; }
+        });
+        return best;
+    }
+
+    /** Decode a file ArrayBuffer to text (UTF-8, BOM stripped), with a latin1 fallback. */
+    function decodeText(buffer) {
+        var text;
+        try {
+            text = new TextDecoder("utf-8").decode(new Uint8Array(buffer));
+        } catch (e) {
+            var bytes = new Uint8Array(buffer);
+            text = "";
+            for (var i = 0; i < bytes.length; i++) { text += String.fromCharCode(bytes[i]); }
+        }
+        if (text.charCodeAt(0) === 0xFEFF) { text = text.slice(1); }
+        return text;
+    }
+
+    /** Append a row to the accumulator unless every one of its cells is blank. */
+    function pushRow(rows, row) {
+        for (var i = 0; i < row.length; i++) {
+            if (String(row[i]).trim() !== "") { rows.push(row); return; }
+        }
+    }
+
+    /**
+     * Tokenise delimited text into an array of row arrays, honouring the given delimiter and quote
+     * character (RFC 4180 style: a quote opens a field only at its start, and a doubled quote inside
+     * a quoted field is a literal quote). Fully blank rows are dropped.
+     */
+    function parseDelimited(text, delim, quote) {
+        var rows = [], row = [], field = "", inQuotes = false, i = 0, n = text.length;
+        while (i < n) {
+            var c = text.charAt(i);
+            if (inQuotes) {
+                if (c === quote) {
+                    if (text.charAt(i + 1) === quote) { field += quote; i += 2; continue; }
+                    inQuotes = false; i++; continue;
+                }
+                field += c; i++; continue;
+            }
+            if (c === quote && field === "") { inQuotes = true; i++; continue; }
+            if (c === delim) { row.push(field); field = ""; i++; continue; }
+            if (c === "\r") {
+                row.push(field); field = ""; pushRow(rows, row); row = [];
+                i += (text.charAt(i + 1) === "\n") ? 2 : 1; continue;
+            }
+            if (c === "\n") { row.push(field); field = ""; pushRow(rows, row); row = []; i++; continue; }
+            field += c; i++;
+        }
+        if (field !== "" || row.length) { row.push(field); pushRow(rows, row); }
+        return rows;
     }
 
     window.initExcelImport = function (config) {

@@ -180,6 +180,8 @@ Properties are grouped into four tabs.
 | **Required import** | Blocks submission if no valid file has been imported. |
 | **Columns / Mapping** | Grid mapping each Excel header to a target field. Columns: *Excel header*, *Field ID (target)*, *Type*, *Required*, *Unique key*, *Default value*, *Date format*, *Hide from preview*. Blank field ID = preview-only (not stored). |
 | **Case-sensitive headers** | When unchecked (default), Excel headers are matched case-insensitively. |
+| **CSV delimiter** | `.csv` only. Column separator character (e.g. `;` or `,`). Enter `\t` or `tab` for a tab. Blank = auto-detect. Ignored for `.xlsx`/`.xls`. |
+| **CSV quote character** | `.csv` only. Character wrapping values that contain the delimiter or a line break (e.g. `'`). Blank = the default double-quote (`"`). Ignored for `.xlsx`/`.xls`. |
 
 #### Column type coercion & cleansing
 
