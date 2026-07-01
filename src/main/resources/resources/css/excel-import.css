@@ -1,6 +1,6 @@
 /*
- * Excel Parser plugin styles.
- * Loaded once via a <link> in ExcelParser.ftl (no JS injection).
+ * Excel Import plugin styles.
+ * Loaded once via a <link> in ExcelImport.ftl (no JS injection).
  */
 
 .excel-import-fullwidth > label {

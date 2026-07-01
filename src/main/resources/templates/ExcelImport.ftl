@@ -1,4 +1,4 @@
-<#assign base = "${request.contextPath}/plugin/org.joget.plugin.melkart.ExcelParser/">
+<#assign base = "${request.contextPath}/plugin/org.joget.plugin.melkart.ExcelImport/">
 <link rel="stylesheet" type="text/css" href="${base}css/excel-import.css" />
 
 <div class="form-cell<#if element.properties.fullWidth! == 'true'> excel-import-fullwidth</#if>" data-ei-cell-id="${element.properties.id!}" ${elementMetaData!}>
@@ -57,7 +57,7 @@
         (function () {
             var base = "${base}js/";
 
-            // Load a script once, even when several Excel Parser elements are on the page.
+            // Load a script once, even when several Excel Import elements are on the page.
             function loadOnce(src, cb) {
                 var sel = 'script[data-ei-src="' + src + '"]';
                 var existing = document.querySelector(sel);

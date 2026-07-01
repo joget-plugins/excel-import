@@ -1,14 +1,14 @@
 /**
- * Excel Import Library (Joget ExcelParser plugin)
+ * Excel Import Library (Joget ExcelImport plugin)
  *
- * Wires up the import widget whose markup is rendered server-side in ExcelParser.ftl
+ * Wires up the import widget whose markup is rendered server-side in ExcelImport.ftl
  * (drop zone, file bar, error/summary/preview containers) and styled by excel-import.css.
  * It parses the selected .xlsx/.xls client-side with the bundled SheetJS (XLSX),
  * validates (required headers, required cells across columns, composite duplicate
  * key across columns), previews the data, and writes the validated rows -- as a
  * JSON array keyed by Excel header -- into the element's hidden input.
  *
- * The same validation is enforced server-side by ExcelParser.selfValidate, which
+ * The same validation is enforced server-side by ExcelImport.selfValidate, which
  * blocks the submission on any error.
  *
  * Guarded so it is harmless if the script is included more than once on a page.

@@ -1,6 +1,6 @@
 [
     {
-        "title": "@@ExcelParser.config@@",
+        "title": "@@ExcelImport.config@@",
         "properties": [
             {
                 "name": "id",
@@ -8,17 +8,17 @@
                 "type": "textfield",
                 "required": "True",
                 "regex_validation": "^[a-zA-Z0-9_]+$",
-                "validation_message": "@@ExcelParser.invalidId@@"
+                "validation_message": "@@ExcelImport.invalidId@@"
             },
             {
                 "name": "label",
-                "label": "@@ExcelParser.label@@",
+                "label": "@@ExcelImport.label@@",
                 "type": "textfield"
             },
             {
                 "name": "required",
-                "label": "@@ExcelParser.required@@",
-                "description": "@@ExcelParser.requiredDesc@@",
+                "label": "@@ExcelImport.required@@",
+                "description": "@@ExcelImport.requiredDesc@@",
                 "type": "checkbox",
                 "value": "",
                 "options": [
@@ -30,49 +30,49 @@
             },
             {
                 "name": "columns",
-                "label": "@@ExcelParser.columns@@",
-                "description": "@@ExcelParser.columnsDesc@@",
+                "label": "@@ExcelImport.columns@@",
+                "description": "@@ExcelImport.columnsDesc@@",
                 "type": "grid",
                 "columns": [
                     {
                         "key": "excelHeader",
-                        "label": "@@ExcelParser.col.excelHeader@@",
+                        "label": "@@ExcelImport.col.excelHeader@@",
                         "required": "True"
                     },
                     {
                         "key": "fieldId",
-                        "label": "@@ExcelParser.col.fieldId@@"
+                        "label": "@@ExcelImport.col.fieldId@@"
                     },
                     {
                         "key": "required",
-                        "label": "@@ExcelParser.col.required@@",
+                        "label": "@@ExcelImport.col.required@@",
                         "options": [
-                            { "value": "", "label": "@@ExcelParser.no@@" },
-                            { "value": "true", "label": "@@ExcelParser.yes@@" }
+                            { "value": "", "label": "@@ExcelImport.no@@" },
+                            { "value": "true", "label": "@@ExcelImport.yes@@" }
                         ]
                     },
                     {
                         "key": "uniqueKey",
-                        "label": "@@ExcelParser.col.uniqueKey@@",
+                        "label": "@@ExcelImport.col.uniqueKey@@",
                         "options": [
-                            { "value": "", "label": "@@ExcelParser.no@@" },
-                            { "value": "true", "label": "@@ExcelParser.yes@@" }
+                            { "value": "", "label": "@@ExcelImport.no@@" },
+                            { "value": "true", "label": "@@ExcelImport.yes@@" }
                         ]
                     },
                     {
                         "key": "hideInPreview",
-                        "label": "@@ExcelParser.col.hideInPreview@@",
+                        "label": "@@ExcelImport.col.hideInPreview@@",
                         "options": [
-                            { "value": "", "label": "@@ExcelParser.no@@" },
-                            { "value": "true", "label": "@@ExcelParser.yes@@" }
+                            { "value": "", "label": "@@ExcelImport.no@@" },
+                            { "value": "true", "label": "@@ExcelImport.yes@@" }
                         ]
                     }
                 ]
             },
             {
                 "name": "caseSensitiveHeaders",
-                "label": "@@ExcelParser.caseSensitiveHeaders@@",
-                "description": "@@ExcelParser.caseSensitiveHeadersDesc@@",
+                "label": "@@ExcelImport.caseSensitiveHeaders@@",
+                "description": "@@ExcelImport.caseSensitiveHeadersDesc@@",
                 "type": "checkbox",
                 "value": "",
                 "options": [
@@ -85,12 +85,12 @@
         ]
     },
     {
-        "title": "@@ExcelParser.storage@@",
+        "title": "@@ExcelImport.storage@@",
         "properties": [
             {
                 "name": "disableParentStore",
-                "label": "@@ExcelParser.disableParentStore@@",
-                "description": "@@ExcelParser.disableParentStoreDesc@@",
+                "label": "@@ExcelImport.disableParentStore@@",
+                "description": "@@ExcelImport.disableParentStoreDesc@@",
                 "type": "checkbox",
                 "value": "",
                 "options": [
@@ -102,8 +102,8 @@
             },
             {
                 "name": "customStorageTarget",
-                "label": "@@ExcelParser.customStorageTarget@@",
-                "description": "@@ExcelParser.customStorageTargetDesc@@",
+                "label": "@@ExcelImport.customStorageTarget@@",
+                "description": "@@ExcelImport.customStorageTargetDesc@@",
                 "type": "checkbox",
                 "value": "",
                 "options": [
@@ -115,14 +115,14 @@
             },
             {
                 "name": "cibleType",
-                "label": "@@ExcelParser.cibleType@@",
-                "description": "@@ExcelParser.cibleTypeDesc@@",
+                "label": "@@ExcelImport.cibleType@@",
+                "description": "@@ExcelImport.cibleTypeDesc@@",
                 "type": "selectbox",
                 "value": "",
                 "options": [
                     { "value": "", "label": "" },
-                    { "value": "form", "label": "@@ExcelParser.cibleType.form@@" },
-                    { "value": "table", "label": "@@ExcelParser.cibleType.table@@" }
+                    { "value": "form", "label": "@@ExcelImport.cibleType.form@@" },
+                    { "value": "table", "label": "@@ExcelImport.cibleType.table@@" }
                 ],
                 "control_field": "customStorageTarget",
                 "control_value": "true",
@@ -130,8 +130,8 @@
             },
             {
                 "name": "formDefId",
-                "label": "@@ExcelParser.targetForm@@",
-                "description": "@@ExcelParser.targetFormDesc@@",
+                "label": "@@ExcelImport.targetForm@@",
+                "description": "@@ExcelImport.targetFormDesc@@",
                 "type": "selectbox",
                 "options_ajax": "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/forms/options",
                 "control_field": "cibleType",
@@ -140,8 +140,8 @@
             },
             {
                 "name": "tableName",
-                "label": "@@ExcelParser.tableName@@",
-                "description": "@@ExcelParser.tableNameDesc@@",
+                "label": "@@ExcelImport.tableName@@",
+                "description": "@@ExcelImport.tableNameDesc@@",
                 "type": "textfield",
                 "control_field": "cibleType",
                 "control_value": "table",
@@ -149,21 +149,21 @@
             },
             {
                 "name": "parentColumnName",
-                "label": "@@ExcelParser.parentColumnName@@",
-                "description": "@@ExcelParser.parentColumnNameDesc@@",
+                "label": "@@ExcelImport.parentColumnName@@",
+                "description": "@@ExcelImport.parentColumnNameDesc@@",
                 "type": "textfield"
             },
             {
                 "name": "parentColumnValue",
-                "label": "@@ExcelParser.parentColumnValue@@",
-                "description": "@@ExcelParser.parentColumnValueDesc@@",
+                "label": "@@ExcelImport.parentColumnValue@@",
+                "description": "@@ExcelImport.parentColumnValueDesc@@",
                 "type": "autocomplete",
                 "options_ajax": "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
             },
             {
                 "name": "deleteExisting",
-                "label": "@@ExcelParser.deleteExisting@@",
-                "description": "@@ExcelParser.deleteExistingDesc@@",
+                "label": "@@ExcelImport.deleteExisting@@",
+                "description": "@@ExcelImport.deleteExistingDesc@@",
                 "type": "checkbox",
                 "value": "true",
                 "options": [
@@ -175,13 +175,13 @@
             },
             {
                 "name": "replaceStrategy",
-                "label": "@@ExcelParser.replaceStrategy@@",
-                "description": "@@ExcelParser.replaceStrategyDesc@@",
+                "label": "@@ExcelImport.replaceStrategy@@",
+                "description": "@@ExcelImport.replaceStrategyDesc@@",
                 "type": "selectbox",
                 "value": "parentId",
                 "options": [
-                    { "value": "parentId", "label": "@@ExcelParser.replaceStrategy.parentId@@" },
-                    { "value": "uniqueKeys", "label": "@@ExcelParser.replaceStrategy.uniqueKeys@@" }
+                    { "value": "parentId", "label": "@@ExcelImport.replaceStrategy.parentId@@" },
+                    { "value": "uniqueKeys", "label": "@@ExcelImport.replaceStrategy.uniqueKeys@@" }
                 ],
                 "control_field": "deleteExisting",
                 "control_value": "true",
@@ -189,8 +189,8 @@
             },
             {
                 "name": "checkExistingDuplicates",
-                "label": "@@ExcelParser.checkExistingDuplicates@@",
-                "description": "@@ExcelParser.checkExistingDuplicatesDesc@@",
+                "label": "@@ExcelImport.checkExistingDuplicates@@",
+                "description": "@@ExcelImport.checkExistingDuplicatesDesc@@",
                 "type": "checkbox",
                 "value": "",
                 "options": [
@@ -203,18 +203,18 @@
         ]
     },
     {
-        "title": "@@ExcelParser.uiOptions@@",
+        "title": "@@ExcelImport.uiOptions@@",
         "properties": [
             {
                 "name": "maxFileSizeMB",
-                "label": "@@ExcelParser.maxFileSizeMB@@",
+                "label": "@@ExcelImport.maxFileSizeMB@@",
                 "type": "textfield",
                 "value": "5"
             },
             {
                 "name": "hidePreview",
-                "label": "@@ExcelParser.hidePreview@@",
-                "description": "@@ExcelParser.hidePreviewDesc@@",
+                "label": "@@ExcelImport.hidePreview@@",
+                "description": "@@ExcelImport.hidePreviewDesc@@",
                 "type": "checkbox",
                 "value": "",
                 "options": [
@@ -226,20 +226,20 @@
             },
             {
                 "name": "previewHeight",
-                "label": "@@ExcelParser.previewHeight@@",
+                "label": "@@ExcelImport.previewHeight@@",
                 "type": "textfield",
                 "value": "400"
             },
             {
                 "name": "dropzoneText",
-                "label": "@@ExcelParser.dropzoneText@@",
+                "label": "@@ExcelImport.dropzoneText@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.dropzoneTextDefault@@"
+                "value": "@@ExcelImport.dropzoneTextDefault@@"
             },
             {
                 "name": "fullWidth",
-                "label": "@@ExcelParser.fullWidth@@",
-                "description": "@@ExcelParser.fullWidthDesc@@",
+                "label": "@@ExcelImport.fullWidth@@",
+                "description": "@@ExcelImport.fullWidthDesc@@",
                 "type": "checkbox",
                 "value": "",
                 "options": [
@@ -252,67 +252,67 @@
         ]
     },
     {
-        "title": "@@ExcelParser.messagesTab@@",
+        "title": "@@ExcelImport.messagesTab@@",
         "properties": [
             {
                 "name": "msgRequired",
-                "label": "@@ExcelParser.msg.required@@",
+                "label": "@@ExcelImport.msg.required@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.err.required@@"
+                "value": "@@ExcelImport.err.required@@"
             },
             {
                 "name": "msgInvalidData",
-                "label": "@@ExcelParser.msg.invalidData@@",
+                "label": "@@ExcelImport.msg.invalidData@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.err.invalidData@@"
+                "value": "@@ExcelImport.err.invalidData@@"
             },
             {
                 "name": "msgMissingHeaders",
-                "label": "@@ExcelParser.msg.missingHeaders@@",
+                "label": "@@ExcelImport.msg.missingHeaders@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.err.missingHeaders@@"
+                "value": "@@ExcelImport.err.missingHeaders@@"
             },
             {
                 "name": "msgRequiredCell",
-                "label": "@@ExcelParser.msg.requiredCell@@",
+                "label": "@@ExcelImport.msg.requiredCell@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.err.requiredCell@@"
+                "value": "@@ExcelImport.err.requiredCell@@"
             },
             {
                 "name": "msgDuplicate",
-                "label": "@@ExcelParser.msg.duplicate@@",
+                "label": "@@ExcelImport.msg.duplicate@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.err.duplicate@@"
+                "value": "@@ExcelImport.err.duplicate@@"
             },
             {
                 "name": "msgExistingDuplicate",
-                "label": "@@ExcelParser.msg.existingDuplicate@@",
+                "label": "@@ExcelImport.msg.existingDuplicate@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.err.existingDuplicate@@"
+                "value": "@@ExcelImport.err.existingDuplicate@@"
             },
             {
                 "name": "msgEmptyFile",
-                "label": "@@ExcelParser.msg.emptyFile@@",
+                "label": "@@ExcelImport.msg.emptyFile@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.err.emptyFile@@"
+                "value": "@@ExcelImport.err.emptyFile@@"
             },
             {
                 "name": "msgReadError",
-                "label": "@@ExcelParser.msg.readError@@",
+                "label": "@@ExcelImport.msg.readError@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.err.readError@@"
+                "value": "@@ExcelImport.err.readError@@"
             },
             {
                 "name": "msgFileTooLarge",
-                "label": "@@ExcelParser.msg.fileTooLarge@@",
+                "label": "@@ExcelImport.msg.fileTooLarge@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.err.fileTooLarge@@"
+                "value": "@@ExcelImport.err.fileTooLarge@@"
             },
             {
                 "name": "msgRowsValid",
-                "label": "@@ExcelParser.msg.rowsValid@@",
+                "label": "@@ExcelImport.msg.rowsValid@@",
                 "type": "textfield",
-                "value": "@@ExcelParser.info.rowsValid@@"
+                "value": "@@ExcelImport.info.rowsValid@@"
             }
         ]
     }

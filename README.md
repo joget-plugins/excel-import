@@ -1,4 +1,4 @@
-# Excel Parser — Joget Form Element Plugin
+# Excel Import — Joget Form Element Plugin
 
 A self-contained **Excel import** form element for [Joget](https://www.joget.org/) (DX 8).
 Drop an `.xlsx` / `.xls` file into a form, preview and validate it in the browser, and on
@@ -75,17 +75,17 @@ anything is written.
                                │ form submit (JSON round-trips)
 ┌──────────────────────────────▼───────────────────────────────────┐
 │                             Server                                │
-│  5. ExcelParser.selfValidate() re-runs the same checks and       │
+│  5. ExcelImport.selfValidate() re-runs the same checks and       │
 │     blocks the submit on any error                                │
-│  6. ExcelParser.formatData() turns the JSON into a FormRowSet     │
+│  6. ExcelImport.formatData() turns the JSON into a FormRowSet     │
 │     (one FormRow per Excel row, keyed by target field ID)         │
-│  7. ExcelParserBinder.store() writes each row to the target       │
+│  7. ExcelImportBinder.store() writes each row to the target       │
 │     form/table, stamping the parent FK and applying the           │
 │     replace strategy                                              │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-On **edit**, `ExcelParserBinder.load()` reads the child rows back and the element rebuilds the
+On **edit**, `ExcelImportBinder.load()` reads the child rows back and the element rebuilds the
 hidden-field JSON so the preview is restored and an unchanged re-submit re-stores identical data.
 
 ---
@@ -97,15 +97,15 @@ The plugin is deliberately split into two classes because in Joget a form `Eleme
 
 | Class | Role |
 |-------|------|
-| `ExcelParser` | The form **element**. Renders the widget, builds the client config, exposes the parsed rows via `formatData()`, mirrors the front-end validation in `selfValidate()`, and holds **all** configuration. |
-| `ExcelParserBinder` | The **store/load binder** (a real `FormBinder`). Supplied by the element through `getStoreBinder()` / `getLoadBinder()`. Persists and reloads the child rows. Carries no configuration of its own — it reads everything from the host element. |
-| `Activator` | OSGi bundle activator. Registers **only** `ExcelParser`; the binder is instantiated directly by the element, so it never appears as a selectable binder in the form builder. |
+| `ExcelImport` | The form **element**. Renders the widget, builds the client config, exposes the parsed rows via `formatData()`, mirrors the front-end validation in `selfValidate()`, and holds **all** configuration. |
+| `ExcelImportBinder` | The **store/load binder** (a real `FormBinder`). Supplied by the element through `getStoreBinder()` / `getLoadBinder()`. Persists and reloads the child rows. Carries no configuration of its own — it reads everything from the host element. |
+| `Activator` | OSGi bundle activator. Registers **only** `ExcelImport`; the binder is instantiated directly by the element, so it never appears as a selectable binder in the form builder. |
 
 Front-end assets:
 
 | File | Role |
 |------|------|
-| `templates/ExcelParser.ftl` | Server-side FreeMarker template: widget markup, hidden fields, and the bootstrap script that lazy-loads the libraries once per page. |
+| `templates/ExcelImport.ftl` | Server-side FreeMarker template: widget markup, hidden fields, and the bootstrap script that lazy-loads the libraries once per page. |
 | `resources/js/excel-import-lib.js` | The import logic: parsing, validation, preview, and committing rows to the hidden field. |
 | `resources/js/xlsx.full.min.js` | Bundled SheetJS parser. |
 | `resources/css/excel-import.css` | Widget styling. |
@@ -129,7 +129,7 @@ mvn clean install
 The output is an OSGi bundle JAR under `target/`:
 
 ```
-target/excel-parser-1.0.0.jar
+target/excel-import-1.0.0.jar
 ```
 
 > Tests are skipped by the build configuration (`skipTests=true`).
@@ -139,8 +139,8 @@ target/excel-parser-1.0.0.jar
 ## Install
 
 1. In Joget, open **Settings → Manage Plugins**.
-2. Upload `target/excel-parser-1.0.0.jar`.
-3. The **Excel Parser** element now appears in the Form Builder palette under the
+2. Upload `target/excel-import-1.0.0.jar`.
+3. The **Excel Import** element now appears in the Form Builder palette under the
    **Custom** category (spreadsheet icon).
 
 To uninstall, remove the bundle from **Manage Plugins**.
@@ -149,7 +149,7 @@ To uninstall, remove the bundle from **Manage Plugins**.
 
 ## Usage
 
-1. In the **Form Builder**, drag **Excel Parser** onto your form.
+1. In the **Form Builder**, drag **Excel Import** onto your form.
 2. Open its properties and set an **ID** (letters, digits, underscore only).
 3. Under **Columns / Mapping**, add one row per Excel column:
    - **Excel header** — the exact header text in the spreadsheet.
@@ -232,7 +232,7 @@ offending column/rows, or the valid/total row counts.
 ## Validation
 
 The same three checks run **in the browser** (with a detailed, per-row breakdown and highlighted
-cells) and **on the server** (`ExcelParser.selfValidate`, which blocks the submit):
+cells) and **on the server** (`ExcelImport.selfValidate`, which blocks the submit):
 
 1. **Header structure** — every mapped Excel header must be present in the file.
 2. **Required cells** — flagged columns must have a non-empty value in every row.
@@ -253,9 +253,9 @@ An optional fourth check runs server-side when **Check existing duplicates** is 
 
 ## Internationalisation
 
-All labels and messages live in `src/main/resources/messages/ExcelParser.properties` and are
+All labels and messages live in `src/main/resources/messages/ExcelImport.properties` and are
 resolved through `AppPluginUtil.getMessage(...)`. The bundle ships with **French** defaults.
-To add another language, provide a locale-suffixed bundle (e.g. `ExcelParser_en.properties`)
+To add another language, provide a locale-suffixed bundle (e.g. `ExcelImport_en.properties`)
 following Joget's message-bundle conventions.
 
 ---
@@ -263,17 +263,17 @@ following Joget's message-bundle conventions.
 ## Project structure
 
 ```
-excel-parser/
+excel-import/
 ├── pom.xml
 └── src/main/
     ├── java/org/joget/plugin/melkart/
-    │   ├── Activator.java            # OSGi bundle activator (registers ExcelParser)
-    │   ├── ExcelParser.java          # Form element: render, config, formatData, selfValidate
-    │   └── ExcelParserBinder.java    # Store/load binder: persist & reload child rows
+    │   ├── Activator.java            # OSGi bundle activator (registers ExcelImport)
+    │   ├── ExcelImport.java          # Form element: render, config, formatData, selfValidate
+    │   └── ExcelImportBinder.java    # Store/load binder: persist & reload child rows
     └── resources/
-        ├── messages/ExcelParser.properties   # i18n bundle (labels + messages)
-        ├── properties/ExcelParser.json       # Form-builder property configuration
-        ├── templates/ExcelParser.ftl         # Widget markup + bootstrap script
+        ├── messages/ExcelImport.properties   # i18n bundle (labels + messages)
+        ├── properties/ExcelImport.json       # Form-builder property configuration
+        ├── templates/ExcelImport.ftl         # Widget markup + bootstrap script
         └── resources/
             ├── css/excel-import.css
             └── js/
@@ -286,7 +286,7 @@ excel-parser/
 ## Developer notes
 
 - **Why two classes?** `Element` and `FormBinder` are sibling types in Joget; a class can only
-  be one. The element supplies a cached `ExcelParserBinder` through `getStoreBinder()` /
+  be one. The element supplies a cached `ExcelImportBinder` through `getStoreBinder()` /
   `getLoadBinder()`. Caching matters: Joget keys the `formatData()` row set by the exact binder
   instance returned and later looks it up again to call `store()`.
 - **Host-record suppression** relies on Joget executing store binders depth-first, with the root

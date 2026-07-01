@@ -32,13 +32,13 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * Excel Parser form element.
+ * Excel Import form element.
  *
  * <p>Renders a self-contained Excel import widget (own drop zone + client side preview,
  * parsed with a bundled copy of SheetJS/xlsx). The validated rows are written, keyed by
  * Excel header, into a hidden field as a JSON array.</p>
  *
- * <p>Persistence is delegated to a companion {@link ExcelParserBinder} (a real
+ * <p>Persistence is delegated to a companion {@link ExcelImportBinder} (a real
  * {@link FormBinder}) which this element supplies through {@link #getStoreBinder()} /
  * {@link #getLoadBinder()}: on submit every Excel row is stored as one record in a configurable
  * target form/table (multi-row), each linked to the current submission via a configurable parent
@@ -48,9 +48,9 @@ import org.json.JSONObject;
  * key across columns) is mirrored server-side in {@link #selfValidate(FormData)} and blocks
  * the submission on any error.</p>
  */
-public class ExcelParser extends Element implements FormBuilderPaletteElement, FormContainer {
+public class ExcelImport extends Element implements FormBuilderPaletteElement, FormContainer {
 
-    public static final String MESSAGES_PATH = "messages/ExcelParser";
+    public static final String MESSAGES_PATH = "messages/ExcelImport";
 
     @Override
     public String getClassName() {
@@ -59,17 +59,17 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
 
     @Override
     public String getName() {
-        return "Excel Parser";
+        return "Excel Import";
     }
 
     @Override
     public String getLabel() {
-        return AppPluginUtil.getMessage("ExcelParser.pluginLabel", getClassName(), MESSAGES_PATH);
+        return AppPluginUtil.getMessage("ExcelImport.pluginLabel", getClassName(), MESSAGES_PATH);
     }
 
     @Override
     public String getDescription() {
-        return AppPluginUtil.getMessage("ExcelParser.pluginDesc", getClassName(), MESSAGES_PATH);
+        return AppPluginUtil.getMessage("ExcelImport.pluginDesc", getClassName(), MESSAGES_PATH);
     }
 
     @Override
@@ -77,7 +77,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         try {
             Properties props = new Properties();
             try (InputStream is = getClass().getResourceAsStream(
-                    "/META-INF/maven/org.joget.plugin.melkart/excel-parser/pom.properties")) {
+                    "/META-INF/maven/org.joget.plugin.melkart/excel-import/pom.properties")) {
                 if (is != null) {
                     props.load(is);
                     return props.getProperty("version");
@@ -91,7 +91,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
 
     @Override
     public String getPropertyOptions() {
-        return AppUtil.readPluginResource(getClassName(), "/properties/ExcelParser.json", null, true, MESSAGES_PATH);
+        return AppUtil.readPluginResource(getClassName(), "/properties/ExcelImport.json", null, true, MESSAGES_PATH);
     }
 
     //
@@ -101,7 +101,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
     @Override
     public String getFormBuilderTemplate() {
         return "<div style='border: 2px dashed #667eea;padding: 20px;text-align: center;border-radius: 10px;color:#667eea;'>"
-                + "<i class=\"fas fa-file-excel\"></i> Excel Parser</div>";
+                + "<i class=\"fas fa-file-excel\"></i> Excel Import</div>";
     }
 
     @Override
@@ -124,7 +124,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
     //
     // The element cannot be its own binder: Element and FormBinder are sibling types, so the
     // runtime cast "(FormBinder) element.getStoreBinder()" would throw ClassCastException.
-    // Instead we hand back a cached ExcelParserBinder instance. It is cached (via the inherited
+    // Instead we hand back a cached ExcelImportBinder instance. It is cached (via the inherited
     // store/load binder fields) because Joget keys the formatData() row set by the exact binder
     // instance returned here and later looks it up again to invoke store().
 
@@ -132,7 +132,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
     public FormStoreBinder getStoreBinder() {
         FormStoreBinder binder = super.getStoreBinder();
         if (binder == null) {
-            ExcelParserBinder excelBinder = new ExcelParserBinder();
+            ExcelImportBinder excelBinder = new ExcelImportBinder();
             excelBinder.setElement(this);
             setStoreBinder(excelBinder);
             binder = excelBinder;
@@ -144,7 +144,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
     public FormLoadBinder getLoadBinder() {
         FormLoadBinder binder = super.getLoadBinder();
         if (binder == null) {
-            ExcelParserBinder excelBinder = new ExcelParserBinder();
+            ExcelImportBinder excelBinder = new ExcelImportBinder();
             excelBinder.setElement(this);
             setLoadBinder(excelBinder);
             binder = excelBinder;
@@ -158,7 +158,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
 
     @Override
     public String renderTemplate(FormData formData, Map dataModel) {
-        String template = "ExcelParser.ftl";
+        String template = "ExcelImport.ftl";
 
         String parentValue = resolveParentValue(formData);
 
@@ -182,7 +182,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         dataModel.put("fileName", resolveFileName(formData));
         dataModel.put("jsConfig", buildClientConfig());
         dataModel.put("dropzoneText", defaultStr(getPropertyString("dropzoneText"),
-                AppPluginUtil.getMessage("ExcelParser.dropzoneTextDefault", getClassName(), MESSAGES_PATH)));
+                AppPluginUtil.getMessage("ExcelImport.dropzoneTextDefault", getClassName(), MESSAGES_PATH)));
 
         return FormUtil.generateElementHtml(this, formData, template, dataModel);
     }
@@ -229,13 +229,13 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
 
             // Localised messages shared with the client (overridable per element).
             JSONObject messages = new JSONObject();
-            messages.put("missingHeaders", customMsg("msgMissingHeaders", "ExcelParser.err.missingHeaders"));
-            messages.put("requiredCell", customMsg("msgRequiredCell", "ExcelParser.err.requiredCell"));
-            messages.put("duplicate", customMsg("msgDuplicate", "ExcelParser.err.duplicate"));
-            messages.put("emptyFile", customMsg("msgEmptyFile", "ExcelParser.err.emptyFile"));
-            messages.put("readError", customMsg("msgReadError", "ExcelParser.err.readError"));
-            messages.put("fileTooLarge", customMsg("msgFileTooLarge", "ExcelParser.err.fileTooLarge"));
-            messages.put("rowsValid", customMsg("msgRowsValid", "ExcelParser.info.rowsValid"));
+            messages.put("missingHeaders", customMsg("msgMissingHeaders", "ExcelImport.err.missingHeaders"));
+            messages.put("requiredCell", customMsg("msgRequiredCell", "ExcelImport.err.requiredCell"));
+            messages.put("duplicate", customMsg("msgDuplicate", "ExcelImport.err.duplicate"));
+            messages.put("emptyFile", customMsg("msgEmptyFile", "ExcelImport.err.emptyFile"));
+            messages.put("readError", customMsg("msgReadError", "ExcelImport.err.readError"));
+            messages.put("fileTooLarge", customMsg("msgFileTooLarge", "ExcelImport.err.fileTooLarge"));
+            messages.put("rowsValid", customMsg("msgRowsValid", "ExcelImport.info.rowsValid"));
             cfg.put("messages", messages);
         } catch (Exception e) {
             LogUtil.error(getClassName(), e, "Error building client config");
@@ -354,7 +354,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         boolean empty = (value == null || value.trim().isEmpty());
         if (empty) {
             if (required) {
-                formData.addFormError(fieldId, customMsg("msgRequired", "ExcelParser.err.required"));
+                formData.addFormError(fieldId, customMsg("msgRequired", "ExcelImport.err.required"));
                 return false;
             }
             return true;
@@ -363,7 +363,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
         // Beyond "required", the back-end reports a single generic "invalid data" error for any
         // failed check (bad JSON, missing headers, empty required cells, duplicates). The detailed,
         // per-row breakdown is surfaced client-side by excel-import-lib.js.
-        String invalidMsg = customMsg("msgInvalidData", "ExcelParser.err.invalidData");
+        String invalidMsg = customMsg("msgInvalidData", "ExcelImport.err.invalidData");
 
         List<Map<String, String>> columns = getColumns();
         boolean caseSensitive = "true".equalsIgnoreCase(getPropertyString("caseSensitiveHeaders"));
@@ -378,7 +378,7 @@ public class ExcelParser extends Element implements FormBuilderPaletteElement, F
 
         if (arr.length() == 0) {
             if (required) {
-                formData.addFormError(fieldId, customMsg("msgRequired", "ExcelParser.err.required"));
+                formData.addFormError(fieldId, customMsg("msgRequired", "ExcelImport.err.required"));
                 return false;
             }
             return true;

@@ -25,18 +25,18 @@ import org.joget.commons.util.UuidGenerator;
 import org.joget.workflow.util.WorkflowUtil;
 
 /**
- * Store/load binder for the {@link ExcelParser} element.
+ * Store/load binder for the {@link ExcelImport} element.
  *
- * <p>{@code ExcelParser} is a form {@link Element}; it cannot also be a {@link FormBinder} because
+ * <p>{@code ExcelImport} is a form {@link Element}; it cannot also be a {@link FormBinder} because
  * the two are sibling types in Joget (a class can be one or the other, not both). This binder
  * therefore lives as its own {@code FormBinder} subclass and is supplied by the element through
- * {@link ExcelParser#getStoreBinder()} / {@link ExcelParser#getLoadBinder()}.</p>
+ * {@link ExcelImport#getStoreBinder()} / {@link ExcelImport#getLoadBinder()}.</p>
  *
  * <p>All configuration (columns, storage target, parent link, replace strategy) lives on the
  * element, so the binder reads it from the {@code element} passed to {@link #store} / {@link #load}.
  * It carries no properties of its own.</p>
  */
-public class ExcelParserBinder extends FormBinder implements FormStoreBinder, FormLoadBinder {
+public class ExcelImportBinder extends FormBinder implements FormStoreBinder, FormLoadBinder {
 
     @Override
     public String getClassName() {
@@ -45,17 +45,17 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
 
     @Override
     public String getName() {
-        return "Excel Parser Binder";
+        return "Excel Import Binder";
     }
 
     @Override
     public String getLabel() {
-        return "Excel Parser Binder";
+        return "Excel Import Binder";
     }
 
     @Override
     public String getDescription() {
-        return "Store/load binder for the Excel Parser element.";
+        return "Store/load binder for the Excel Import element.";
     }
 
     @Override
@@ -63,7 +63,7 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
         try {
             Properties props = new Properties();
             try (InputStream is = getClass().getResourceAsStream(
-                    "/META-INF/maven/org.joget.plugin.melkart/excel-parser/pom.properties")) {
+                    "/META-INF/maven/org.joget.plugin.melkart/excel-import/pom.properties")) {
                 if (is != null) {
                     props.load(is);
                     return props.getProperty("version");
@@ -87,11 +87,11 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
 
     @Override
     public FormRowSet store(Element element, FormRowSet rows, FormData formData) {
-        if (!(element instanceof ExcelParser)) {
-            LogUtil.warn(getClassName(), "ExcelParserBinder is attached to a non-ExcelParser element; skipping store.");
+        if (!(element instanceof ExcelImport)) {
+            LogUtil.warn(getClassName(), "ExcelImportBinder is attached to a non-ExcelImport element; skipping store.");
             return rows;
         }
-        ExcelParser ep = (ExcelParser) element;
+        ExcelImport ep = (ExcelImport) element;
 
         // When configured, stop the host form's own store binder from persisting its (parent) record,
         // so only the imported Excel rows are stored.
@@ -99,7 +99,7 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
             suppressHostRecordStore(ep, element, formData);
         }
 
-        ExcelParser.StorageTarget target = ep.resolveStorageTarget();
+        ExcelImport.StorageTarget target = ep.resolveStorageTarget();
         if (target == null) {
             LogUtil.warn(getClassName(), "No storage target could be resolved; skipping Excel import store.");
             return rows;
@@ -152,7 +152,7 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
      * The default {@code WorkflowFormBinder} short-circuits on an empty row set, so no record is written
      * and any existing record is left untouched.</p>
      */
-    protected void suppressHostRecordStore(ExcelParser ep, Element element, FormData formData) {
+    protected void suppressHostRecordStore(ExcelImport ep, Element element, FormData formData) {
         try {
             Form rootForm = FormUtil.findRootForm(element);
             if (rootForm == null) {
@@ -173,7 +173,7 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
      * Deletes existing rows whose unique-key combination matches any of the incoming rows
      * (upsert-by-unique-key replace strategy). No-op when no unique-key columns are configured.
      */
-    protected void deleteByUniqueKeys(ExcelParser ep, FormDataDao formDataDao, ExcelParser.StorageTarget target, FormRowSet rows) {
+    protected void deleteByUniqueKeys(ExcelImport ep, FormDataDao formDataDao, ExcelImport.StorageTarget target, FormRowSet rows) {
         if (rows == null || rows.isEmpty()) {
             return;
         }
@@ -223,13 +223,13 @@ public class ExcelParserBinder extends FormBinder implements FormStoreBinder, Fo
     public FormRowSet load(Element element, String primaryKey, FormData formData) {
         FormRowSet rowSet = new FormRowSet();
         rowSet.setMultiRow(true);
-        if (!(element instanceof ExcelParser)) {
+        if (!(element instanceof ExcelImport)) {
             return rowSet;
         }
         if (primaryKey == null || primaryKey.isEmpty()) {
             return rowSet;
         }
-        ExcelParser ep = (ExcelParser) element;
+        ExcelImport ep = (ExcelImport) element;
         FormRowSet existing = ep.findChildRows(primaryKey, formData);
         if (existing != null) {
             rowSet.addAll(existing);

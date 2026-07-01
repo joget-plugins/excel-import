@@ -14,10 +14,10 @@ public class Activator implements BundleActivator {
         registrations = new ArrayList<ServiceRegistration>();
 
         // Register plugin classes here.
-        // ExcelParserBinder is intentionally NOT registered: the element instantiates it directly
+        // ExcelImportBinder is intentionally NOT registered: the element instantiates it directly
         // in getStoreBinder()/getLoadBinder(), so it never needs to be discovered by class name
         // (and we don't want it appearing as a selectable binder in the form builder).
-        registrations.add(context.registerService(ExcelParser.class.getName(), new ExcelParser(), null));
+        registrations.add(context.registerService(ExcelImport.class.getName(), new ExcelImport(), null));
     }
 
     public void stop(BundleContext context) {
