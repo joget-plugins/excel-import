@@ -43,6 +43,10 @@ anything is written.
 - **Header → field mapping** — map each Excel column header to a target field ID via a grid.
 - **Per-column controls** — mark a column *required*, part of a *unique key*, or *hidden from
   the preview*; leave the field ID blank to show a column in the preview without storing it.
+- **Type coercion & cleansing** — per column, normalize the value to *number* (`"1,234.50"` →
+  `1234.5`), *date* (Excel serial or common date string → a chosen format, `yyyy-MM-dd` by
+  default), or *boolean* (`oui`/`no`/`1`/`0`… → `true`/`false`), and supply a *default value* for
+  empty cells. Applied consistently in the preview and server-side before validation and storage.
 - **Two-sided validation** — required headers, required cells, and composite duplicate keys are
   checked in the browser (with a detailed per-row breakdown) **and** re-checked server-side,
   which blocks the submission.
@@ -154,7 +158,9 @@ To uninstall, remove the bundle from **Manage Plugins**.
 3. Under **Columns / Mapping**, add one row per Excel column:
    - **Excel header** — the exact header text in the spreadsheet.
    - **Field ID (target)** — the field to store it into (leave blank to preview only).
+   - **Type** — optional coercion: *Text* (default), *Number*, *Date*, or *Boolean*.
    - **Required / Unique key / Hide from preview** — per-column flags.
+   - **Default value / Date format** — optional cleansing applied before validation and storage.
 4. Configure the **Data storage** tab (target, parent link, replace strategy).
 5. Save. At runtime, users drop a file, see a validated preview, and on submit each row is
    stored as a record in the target.
@@ -172,8 +178,21 @@ Properties are grouped into four tabs.
 | **ID** | Element ID. Must match `^[a-zA-Z0-9_]+$`. |
 | **Label** | Optional label shown above the widget. |
 | **Required import** | Blocks submission if no valid file has been imported. |
-| **Columns / Mapping** | Grid mapping each Excel header to a target field. Columns: *Excel header*, *Field ID (target)*, *Required*, *Unique key*, *Hide from preview*. Blank field ID = preview-only (not stored). |
+| **Columns / Mapping** | Grid mapping each Excel header to a target field. Columns: *Excel header*, *Field ID (target)*, *Type*, *Required*, *Unique key*, *Default value*, *Date format*, *Hide from preview*. Blank field ID = preview-only (not stored). |
 | **Case-sensitive headers** | When unchecked (default), Excel headers are matched case-insensitively. |
+
+#### Column type coercion & cleansing
+
+Each mapped column can normalize its cell values before validation and storage. Coercion runs
+identically in the browser preview and server-side, and is **best-effort**: a value that cannot be
+parsed for the requested type is left untouched (so the offending input stays visible).
+
+| Option | Effect |
+|--------|--------|
+| **Type = Number** | Strips currency/spaces and resolves separators. When both `,` and `.` appear, the last is the decimal (`"1,234.50"` → `1234.5`). A lone `,` is grouped thousands for `1,000` / `1,234,567`, otherwise a decimal (`"12,5"` → `12.5`). |
+| **Type = Date** | Parses an Excel serial number (1900 date system), an ISO `yyyy-MM-dd`, or a day-first `dd/MM/yyyy` date, and reformats it to **Date format** (tokens `yyyy MM dd HH mm ss`; `yyyy-MM-dd` by default). |
+| **Type = Boolean** | Maps `true/1/yes/y/oui/o/vrai/x/on` → `true` and `false/0/no/n/non/faux/off` → `false` (case-insensitive). |
+| **Default value** | Substituted when the cell is empty, then coerced like any other value. |
 
 ### 2. Data storage
 
@@ -238,6 +257,10 @@ cells) and **on the server** (`ExcelImport.selfValidate`, which blocks the submi
 2. **Required cells** — flagged columns must have a non-empty value in every row.
 3. **Composite duplicate key** — the combination of *unique key* columns must be unique within
    the file.
+
+> [Type coercion & cleansing](#column-type-coercion--cleansing) runs **before** these checks, so
+> validation sees the cleansed values: a **default value** can satisfy a *required* cell, and the
+> duplicate checks compare the coerced (e.g. normalized number/date) values that get stored.
 
 An optional fourth check runs server-side when **Check existing duplicates** is enabled:
 
