@@ -1,7 +1,7 @@
 # Excel Import — Joget Form Element Plugin
 
 A self-contained **Excel import** form element for [Joget](https://www.joget.org/) (DX 8).
-Drop an `.xlsx` / `.xls` file into a form, preview and validate it in the browser, and on
+Drop an `.xlsx` / `.xls` / `.csv` file into a form, preview and validate it in the browser, and on
 submit persist **every row as its own record** in a configurable target form or table — each
 row optionally linked to the host submission by a foreign-key column.
 
@@ -36,8 +36,8 @@ anything is written.
 
 ## Features
 
-- **Client-side parsing** — `.xlsx` / `.xls` read in the browser with bundled SheetJS; nothing
-  is uploaded just to be parsed.
+- **Client-side parsing** — `.xlsx` / `.xls` / `.csv` read in the browser with bundled SheetJS
+  (the delimiter is auto-detected for CSV); nothing is uploaded just to be parsed.
 - **Drag-and-drop widget** — drop zone, file bar, inline error panel and a live preview table,
   all rendered by the plugin (no external CSS/JS dependencies).
 - **Header → field mapping** — map each Excel column header to a target field ID via a grid.
@@ -70,7 +70,7 @@ anything is written.
 
 ```
 ┌──────────────────────────── Browser ────────────────────────────┐
-│  1. User drops an .xlsx into the drop zone                       │
+│  1. User drops an .xlsx / .xls / .csv into the drop zone         │
 │  2. SheetJS parses it → array of row objects (keyed by header)   │
 │  3. excel-import-lib.js validates: headers, required cells,      │
 │     duplicate keys → renders the preview + summary               │
@@ -180,6 +180,8 @@ Properties are grouped into four tabs.
 | **Required import** | Blocks submission if no valid file has been imported. |
 | **Columns / Mapping** | Grid mapping each Excel header to a target field. Columns: *Excel header*, *Field ID (target)*, *Type*, *Required*, *Unique key*, *Default value*, *Date format*, *Hide from preview*. Blank field ID = preview-only (not stored). |
 | **Case-sensitive headers** | When unchecked (default), Excel headers are matched case-insensitively. |
+| **CSV delimiter** | `.csv` only. Column separator character (e.g. `;` or `,`). Enter `\t` or `tab` for a tab. Blank = auto-detect. Ignored for `.xlsx`/`.xls`. |
+| **CSV quote character** | `.csv` only. Character wrapping values that contain the delimiter or a line break (e.g. `'`). Blank = the default double-quote (`"`). Ignored for `.xlsx`/`.xls`. |
 
 #### Column type coercion & cleansing
 

@@ -99,6 +99,18 @@
                         "label": ""
                     }
                 ]
+            },
+            {
+                "name": "csvDelimiter",
+                "label": "@@ExcelImport.csvDelimiter@@",
+                "description": "@@ExcelImport.csvDelimiterDesc@@",
+                "type": "textfield"
+            },
+            {
+                "name": "csvQuote",
+                "label": "@@ExcelImport.csvQuote@@",
+                "description": "@@ExcelImport.csvQuoteDesc@@",
+                "type": "textfield"
             }
         ]
     },
