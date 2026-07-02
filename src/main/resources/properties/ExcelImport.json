@@ -83,6 +83,36 @@
                         "popup": "true"
                     },
                     {
+                        "key": "pattern",
+                        "label": "@@ExcelImport.col.pattern@@",
+                        "type": "textfield",
+                        "popup": "true"
+                    },
+                    {
+                        "key": "minValue",
+                        "label": "@@ExcelImport.col.minValue@@",
+                        "type": "textfield",
+                        "popup": "true",
+                        "control_field": "type",
+                        "control_value": "^(number|date)$",
+                        "control_use_regex": "true"
+                    },
+                    {
+                        "key": "maxValue",
+                        "label": "@@ExcelImport.col.maxValue@@",
+                        "type": "textfield",
+                        "popup": "true",
+                        "control_field": "type",
+                        "control_value": "^(number|date)$",
+                        "control_use_regex": "true"
+                    },
+                    {
+                        "key": "allowedValues",
+                        "label": "@@ExcelImport.col.allowedValues@@",
+                        "type": "textfield",
+                        "popup": "true"
+                    },
+                    {
                         "key": "hideInPreview",
                         "label": "@@ExcelImport.col.hideInPreview@@",
                         "type": "checkbox"
@@ -331,6 +361,24 @@
                 "label": "@@ExcelImport.msg.existingDuplicate@@",
                 "type": "textfield",
                 "value": "@@ExcelImport.err.existingDuplicate@@"
+            },
+            {
+                "name": "msgPattern",
+                "label": "@@ExcelImport.msg.pattern@@",
+                "type": "textfield",
+                "value": "@@ExcelImport.err.pattern@@"
+            },
+            {
+                "name": "msgRange",
+                "label": "@@ExcelImport.msg.range@@",
+                "type": "textfield",
+                "value": "@@ExcelImport.err.range@@"
+            },
+            {
+                "name": "msgNotAllowed",
+                "label": "@@ExcelImport.msg.notAllowed@@",
+                "type": "textfield",
+                "value": "@@ExcelImport.err.notAllowed@@"
             },
             {
                 "name": "msgEmptyFile",

@@ -43,6 +43,9 @@ anything is written.
 - **Header → field mapping** — map each Excel column header to a target field ID via a grid.
 - **Per-column controls** — mark a column *required*, part of a *unique key*, or *hidden from
   the preview*; leave the field ID blank to show a column in the preview without storing it.
+- **Per-column validation rules** — beyond required/unique, optionally enforce a *regex pattern*,
+  a *min / max* range (for number or date columns), and an *allowed-values* list (enum). Checked
+  in the same two-sided (browser + server) path, on non-empty cells, after coercion.
 - **Type coercion & cleansing** — per column, normalize the value to *number* (`"1,234.50"` →
   `1234.5`), *date* (Excel serial or common date string → a chosen format, `yyyy-MM-dd` by
   default), or *boolean* (`oui`/`no`/`1`/`0`… → `true`/`false`), and supply a *default value* for
@@ -179,7 +182,7 @@ Properties are grouped into four tabs.
 | **ID** | Element ID. Must match `^[a-zA-Z0-9_]+$`. |
 | **Label** | Optional label shown above the widget. |
 | **Required import** | Blocks submission if no valid file has been imported. |
-| **Columns / Mapping** | Grid mapping each Excel header to a target field. Columns: *Excel header*, *Field ID (target)*, *Type*, *Required*, *Unique key*, *Default value*, *Date format*, *Hide from preview*. Blank field ID = preview-only (not stored). |
+| **Columns / Mapping** | Grid mapping each Excel header to a target field. Columns: *Excel header*, *Field ID (target)*, *Type*, *Required*, *Unique key*, *Default value*, *Date format*, *Pattern (regex)*, *Minimum*, *Maximum*, *Allowed values*, *Hide from preview*. Blank field ID = preview-only (not stored). |
 | **Case-sensitive headers** | When unchecked (default), Excel headers are matched case-insensitively. |
 | **CSV delimiter** | `.csv` only. Column separator character (e.g. `;` or `,`). Enter `\t` or `tab` for a tab. Blank = auto-detect. Ignored for `.xlsx`/`.xls`. |
 | **CSV quote character** | `.csv` only. Character wrapping values that contain the delimiter or a line break (e.g. `'`). Blank = the default double-quote (`"`). Ignored for `.xlsx`/`.xls`. |
@@ -196,6 +199,19 @@ parsed for the requested type is left untouched (so the offending input stays vi
 | **Type = Date** | Parses an Excel serial number (1900 date system), an ISO `yyyy-MM-dd`, or a day-first `dd/MM/yyyy` date, and reformats it to **Date format** (tokens `yyyy MM dd HH mm ss`; `yyyy-MM-dd` by default). |
 | **Type = Boolean** | Maps `true/1/yes/y/oui/o/vrai/x/on` → `true` and `false/0/no/n/non/faux/off` → `false` (case-insensitive). |
 | **Default value** | Substituted when the cell is empty, then coerced like any other value. |
+
+#### Per-column validation rules
+
+Each mapped column can also enforce optional constraints. They run in the same two-sided path
+(browser preview **and** `selfValidate` server-side), **after** coercion, and only on
+**non-empty** cells (emptiness is governed by *Required*). A cell that fails is highlighted in the
+preview and reported with the offending column and row numbers. Checks apply in the order below.
+
+| Option | Effect |
+|--------|--------|
+| **Allowed values** | Comma-separated list (enum). The cell must equal one of the entries, compared case-insensitively unless *Case-sensitive headers* is on. |
+| **Minimum / Maximum** | Inclusive range. Only meaningful for **Number** and **Date** columns (shown when *Type* is one of those); numbers compare numerically, dates chronologically. A value that cannot be parsed for the type is not flagged — use a pattern for strict format enforcement. |
+| **Pattern (regex)** | The cell must match the regular expression. Matching is *partial* (like JS `RegExp.test`); anchor with `^…$` for a full-string match. An invalid configured regex is ignored. |
 
 ### 2. Data storage
 
@@ -228,7 +244,8 @@ Every user-facing message can be overridden per element. Each falls back to its 
 default from the resource bundle when left blank:
 
 `msgRequired`, `msgInvalidData`, `msgMissingHeaders`, `msgRequiredCell`, `msgDuplicate`,
-`msgExistingDuplicate`, `msgEmptyFile`, `msgReadError`, `msgFileTooLarge`, `msgRowsValid`.
+`msgExistingDuplicate`, `msgPattern`, `msgRange`, `msgNotAllowed`, `msgEmptyFile`, `msgReadError`,
+`msgFileTooLarge`, `msgRowsValid`.
 
 Messages support positional placeholders (`{0}`, `{1}`) — e.g. the missing-columns list, the
 offending column/rows, or the valid/total row counts.
@@ -258,16 +275,18 @@ cells) and **on the server** (`ExcelImport.selfValidate`, which blocks the submi
 
 1. **Header structure** — every mapped Excel header must be present in the file.
 2. **Required cells** — flagged columns must have a non-empty value in every row.
-3. **Composite duplicate key** — the combination of *unique key* columns must be unique within
+3. **Per-column value rules** — for each column that declares them, non-empty cells must satisfy
+   the *allowed values*, *min/max range*, and *regex pattern* constraints (in that order).
+4. **Composite duplicate key** — the combination of *unique key* columns must be unique within
    the file.
 
 > [Type coercion & cleansing](#column-type-coercion--cleansing) runs **before** these checks, so
 > validation sees the cleansed values: a **default value** can satisfy a *required* cell, and the
 > duplicate checks compare the coerced (e.g. normalized number/date) values that get stored.
 
-An optional fourth check runs server-side when **Check existing duplicates** is enabled:
+An optional fifth check runs server-side when **Check existing duplicates** is enabled:
 
-4. **Existing duplicates** — reject rows whose unique key already exists in the target table
+5. **Existing duplicates** — reject rows whose unique key already exists in the target table
    (excluding rows belonging to the current parent, which are being replaced).
 
 > The server reports a **single generic** "invalid data" error for any failed check; the

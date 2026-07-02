@@ -201,6 +201,7 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             JSONArray requiredColumns = new JSONArray();
             JSONArray uniqueColumns = new JSONArray();
             JSONObject coercion = new JSONObject();
+            JSONObject validation = new JSONObject();
             for (Map<String, String> col : columns) {
                 String header = col.get("excelHeader");
                 headers.put(header);
@@ -218,6 +219,10 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
                 if (rule != null) {
                     coercion.put(header, rule);
                 }
+                JSONObject vrule = validationRule(col);
+                if (vrule != null) {
+                    validation.put(header, vrule);
+                }
             }
 
             cfg.put("elementId", getPropertyString("id"));
@@ -227,6 +232,7 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             cfg.put("requiredColumns", requiredColumns);
             cfg.put("uniqueColumns", uniqueColumns);
             cfg.put("coercion", coercion);
+            cfg.put("validation", validation);
             cfg.put("caseSensitive", "true".equalsIgnoreCase(getPropertyString("caseSensitiveHeaders")));
             // CSV parsing overrides (ignored for .xlsx/.xls). Empty delimiter = auto-detect;
             // empty quote = the default double-quote.
@@ -242,6 +248,9 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             messages.put("missingHeaders", customMsg("msgMissingHeaders", "ExcelImport.err.missingHeaders"));
             messages.put("requiredCell", customMsg("msgRequiredCell", "ExcelImport.err.requiredCell"));
             messages.put("duplicate", customMsg("msgDuplicate", "ExcelImport.err.duplicate"));
+            messages.put("pattern", customMsg("msgPattern", "ExcelImport.err.pattern"));
+            messages.put("range", customMsg("msgRange", "ExcelImport.err.range"));
+            messages.put("notAllowed", customMsg("msgNotAllowed", "ExcelImport.err.notAllowed"));
             messages.put("emptyFile", customMsg("msgEmptyFile", "ExcelImport.err.emptyFile"));
             messages.put("readError", customMsg("msgReadError", "ExcelImport.err.readError"));
             messages.put("fileTooLarge", customMsg("msgFileTooLarge", "ExcelImport.err.fileTooLarge"));
@@ -418,6 +427,26 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             }
         }
 
+        // 2b. Per-column value rules: allowed values, min/max range, and regex pattern. Only
+        // non-empty cells are checked (emptiness is governed by the required check above); mirrors
+        // the client-side rules in excel-import-lib.js.
+        for (Map<String, String> col : columns) {
+            if (!hasCellRules(col)) {
+                continue;
+            }
+            String header = col.get("excelHeader");
+            for (int i = 0; i < arr.length(); i++) {
+                String cell = coerce(getCell(arr.optJSONObject(i), header, caseSensitive), col);
+                if (cell == null || cell.trim().isEmpty()) {
+                    continue;
+                }
+                if (validateCell(cell, col, caseSensitive) != null) {
+                    formData.addFormError(fieldId, invalidMsg);
+                    return false;
+                }
+            }
+        }
+
         // 3. Composite duplicate key across the flagged columns (within the file).
         List<Map<String, String>> uniqueCols = new ArrayList<Map<String, String>>();
         for (Map<String, String> col : columns) {
@@ -545,6 +574,10 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
                     col.put("type", raw.get("type") != null ? raw.get("type").toString().trim() : "");
                     col.put("defaultValue", raw.get("defaultValue") != null ? raw.get("defaultValue").toString() : "");
                     col.put("dateFormat", raw.get("dateFormat") != null ? raw.get("dateFormat").toString().trim() : "");
+                    col.put("pattern", raw.get("pattern") != null ? raw.get("pattern").toString() : "");
+                    col.put("minValue", raw.get("minValue") != null ? raw.get("minValue").toString().trim() : "");
+                    col.put("maxValue", raw.get("maxValue") != null ? raw.get("maxValue").toString().trim() : "");
+                    col.put("allowedValues", raw.get("allowedValues") != null ? raw.get("allowedValues").toString() : "");
                     result.add(col);
                 }
             }
@@ -943,6 +976,160 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             s = "0" + s;
         }
         return s;
+    }
+
+    //
+    // ---- Per-column value validation ----
+    //
+    // Applied identically on the client (excel-import-lib.js), after coercion, on the already
+    // cleansed value. Only non-empty cells are checked; emptiness is governed by the required-cell
+    // check. Best-effort like coercion: a value that cannot be parsed for a min/max comparison is
+    // not flagged (a regex pattern is the tool for enforcing a strict format).
+
+    /**
+     * Builds the per-column validation rule handed to the client, or {@code null} when the column
+     * declares no value rules (so the client config stays small for the common no-op case).
+     */
+    protected JSONObject validationRule(Map<String, String> col) {
+        if (!hasCellRules(col)) {
+            return null;
+        }
+        String pattern = col.get("pattern");
+        String min = col.get("minValue");
+        String max = col.get("maxValue");
+        JSONObject r = new JSONObject();
+        r.put("type", col.get("type") == null ? "" : col.get("type"));
+        r.put("pattern", pattern == null ? "" : pattern);
+        r.put("min", min == null ? "" : min);
+        r.put("max", max == null ? "" : max);
+        JSONArray allowed = new JSONArray();
+        for (String s : parseAllowed(col.get("allowedValues"))) {
+            allowed.put(s);
+        }
+        r.put("allowed", allowed);
+        return r;
+    }
+
+    /** @return {@code true} when the column declares a regex, a min/max bound, or allowed values. */
+    protected static boolean hasCellRules(Map<String, String> col) {
+        if (col == null) {
+            return false;
+        }
+        String pattern = col.get("pattern");
+        String min = col.get("minValue");
+        String max = col.get("maxValue");
+        return (pattern != null && !pattern.isEmpty())
+                || (min != null && !min.isEmpty())
+                || (max != null && !max.isEmpty())
+                || !parseAllowed(col.get("allowedValues")).isEmpty();
+    }
+
+    /** Splits the comma-separated allowed-values list into trimmed, non-empty entries. */
+    protected static List<String> parseAllowed(String raw) {
+        List<String> out = new ArrayList<String>();
+        if (raw == null) {
+            return out;
+        }
+        for (String part : raw.split(",")) {
+            String t = part.trim();
+            if (!t.isEmpty()) {
+                out.add(t);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Validates a single (coerced, non-empty) cell against the column's value rules, in order:
+     * allowed values, min/max range, regex pattern.
+     *
+     * @return the failing rule ({@code "allowed"}/{@code "range"}/{@code "pattern"}), or
+     *         {@code null} when the value passes.
+     */
+    protected static String validateCell(String value, Map<String, String> col, boolean caseSensitive) {
+        String s = value == null ? "" : value.trim();
+
+        List<String> allowed = parseAllowed(col.get("allowedValues"));
+        if (!allowed.isEmpty()) {
+            boolean ok = false;
+            for (String a : allowed) {
+                if (caseSensitive ? a.equals(s) : a.equalsIgnoreCase(s)) {
+                    ok = true;
+                    break;
+                }
+            }
+            if (!ok) {
+                return "allowed";
+            }
+        }
+
+        String min = col.get("minValue");
+        String max = col.get("maxValue");
+        if ((min != null && !min.isEmpty()) || (max != null && !max.isEmpty())) {
+            if (cellOutOfRange(s, col.get("type"), min, max)) {
+                return "range";
+            }
+        }
+
+        String pattern = col.get("pattern");
+        if (pattern != null && !pattern.isEmpty()) {
+            try {
+                // find() (not matches()) to mirror JavaScript RegExp.test — anchor with ^...$ for a
+                // full match.
+                if (!java.util.regex.Pattern.compile(pattern).matcher(s).find()) {
+                    return "pattern";
+                }
+            } catch (Exception e) {
+                /* invalid configured regex: skip */
+            }
+        }
+
+        return null;
+    }
+
+    /** Range check for number/date typed columns; returns {@code false} for any other type. */
+    protected static boolean cellOutOfRange(String s, String type, String min, String max) {
+        String t = type == null ? "" : type.toLowerCase();
+        if ("date".equals(t)) {
+            Long val = dateToMillis(s);
+            if (val == null) {
+                return false;
+            }
+            Long lo = (min != null && !min.isEmpty()) ? dateToMillis(min) : null;
+            Long hi = (max != null && !max.isEmpty()) ? dateToMillis(max) : null;
+            return (lo != null && val < lo) || (hi != null && val > hi);
+        }
+        if ("number".equals(t)) {
+            Double val = cellToNumber(s);
+            if (val == null) {
+                return false;
+            }
+            Double lo = (min != null && !min.isEmpty()) ? cellToNumber(min) : null;
+            Double hi = (max != null && !max.isEmpty()) ? cellToNumber(max) : null;
+            return (lo != null && val < lo) || (hi != null && val > hi);
+        }
+        return false;
+    }
+
+    /** Parses a (possibly grouped/European) number string to a Double, or {@code null}. */
+    protected static Double cellToNumber(String v) {
+        try {
+            return Double.valueOf(coerceNumber(v));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Parses an Excel serial / ISO / day-first date to a comparable UTC millisecond value, or {@code null}. */
+    protected static Long dateToMillis(String v) {
+        int[] p = parseDateParts(v);
+        if (p == null) {
+            return null;
+        }
+        java.util.Calendar c = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+        c.clear();
+        c.set(p[0], p[1] - 1, p[2], p[3], p[4], p[5]);
+        return c.getTimeInMillis();
     }
 
     protected String msg(String key) {
