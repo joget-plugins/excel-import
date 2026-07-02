@@ -100,6 +100,56 @@
     color: #dc2626;
 }
 
+/* ---- Progress / spinner (large-file feedback) ---- */
+.excel-import-progress {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    color: #475569;
+    font-weight: 500;
+}
+
+.excel-import-progress .ei-spinner {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e2e8f0;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: ei-spin .7s linear infinite;
+}
+
+.excel-import-progress .ei-progress-text {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.excel-import-progress .ei-progress-track {
+    flex: 1 1 auto;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.excel-import-progress .ei-progress-fill {
+    height: 100%;
+    width: 0;
+    background: #6366f1;
+    border-radius: 999px;
+    transition: width .12s linear;
+}
+
+@keyframes ei-spin {
+    to { transform: rotate(360deg); }
+}
+
 /* ---- Summary / errors ---- */
 .excel-import-summary {
     margin-top: 12px;

@@ -20,6 +20,11 @@
                 <span class="ei-fname"></span>
                 <span class="excel-import-remove">&#10005; Retirer</span>
             </div>
+            <div class="excel-import-progress" style="display:none">
+                <span class="ei-spinner"></span>
+                <span class="ei-progress-text"></span>
+                <div class="ei-progress-track" style="display:none"><div class="ei-progress-fill"></div></div>
+            </div>
             <div class="excel-import-error" style="display:none"></div>
             <div class="excel-import-summary" style="display:none"></div>
         </div>

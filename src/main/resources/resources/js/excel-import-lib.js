@@ -48,7 +48,48 @@
         return t.replace("{0}", a0 == null ? "" : a0).replace("{1}", a1 == null ? "" : a1);
     };
 
+    /**
+     * Run a heavy, thread-blocking task (parse + validate + first render) on a later frame so any
+     * spinner/progress UI shown beforehand actually paints first -- a long synchronous parse would
+     * otherwise block before the browser gets a chance to render it. Double rAF guarantees a paint
+     * happened in between; setTimeout is the fallback where rAF is unavailable.
+     */
+    ExcelImport.prototype.deferHeavy = function (fn) {
+        if (window.requestAnimationFrame) {
+            requestAnimationFrame(function () { requestAnimationFrame(fn); });
+        } else {
+            setTimeout(fn, 20);
+        }
+    };
+
+    /** Show an indeterminate spinner with a status label (read/parse/validate phase). */
+    ExcelImport.prototype.showSpinner = function (text) {
+        if (!this.progressBox) { return; }
+        if (this.progressTrack) { this.progressTrack.style.display = "none"; }
+        if (this.progressText) { this.progressText.textContent = text || ""; }
+        this.progressBox.style.display = "flex";
+    };
+
+    /** Show/advance a determinate progress bar (chunked preview-render phase). */
+    ExcelImport.prototype.showProgressBar = function (text, current, total) {
+        if (!this.progressBox) { return; }
+        if (this.progressText) { this.progressText.textContent = text || ""; }
+        if (this.progressTrack) {
+            this.progressTrack.style.display = "block";
+            var pct = total ? Math.round((current / total) * 100) : 0;
+            if (this.progressFill) { this.progressFill.style.width = pct + "%"; }
+        }
+        this.progressBox.style.display = "flex";
+    };
+
+    ExcelImport.prototype.hideProgress = function () {
+        if (!this.progressBox) { return; }
+        this.progressBox.style.display = "none";
+        if (this.progressFill) { this.progressFill.style.width = "0%"; }
+    };
+
     ExcelImport.prototype.init = function () {
+        var self = this;
         if (!this.container) {
             return;
         }
@@ -70,7 +111,10 @@
                     if (savedName) {
                         this.showFileBar(savedName);
                     }
-                    this.process(rows, null);
+                    // Same deferred, chunked path as a fresh import so a large stored data set
+                    // (edit / validation reload) does not jank the page while it renders.
+                    this.showSpinner(this.msg("parsing"));
+                    this.deferHeavy(function () { self.process(rows, null); });
                 }
             } catch (e) { /* ignore malformed existing value */ }
         }
@@ -90,6 +134,10 @@
         this.filebar = this.container.querySelector(".excel-import-filebar");
         this.errorBox = this.container.querySelector(".excel-import-error");
         this.summaryBox = this.container.querySelector(".excel-import-summary");
+        this.progressBox = this.container.querySelector(".excel-import-progress");
+        this.progressText = this.progressBox ? this.progressBox.querySelector(".ei-progress-text") : null;
+        this.progressTrack = this.progressBox ? this.progressBox.querySelector(".ei-progress-track") : null;
+        this.progressFill = this.progressBox ? this.progressBox.querySelector(".ei-progress-fill") : null;
         // The preview is rendered as a sibling of the widget (outside this.container) so it can
         // span the full form width, and is omitted entirely when "hide preview" is enabled.
         this.previewBox = document.getElementById(this.config.containerId + "-preview");
@@ -143,11 +191,14 @@
         this.filebar.classList.remove("active");
         this.filebar.querySelector(".ei-fname").textContent = "";
         this.dropzone.classList.remove("ei-hidden");
+        // Cancel any preview render still streaming in from a previous file.
+        if (this._renderToken) { this._renderToken.cancelled = true; }
         if (this.previewBox) {
             this.previewBox.style.display = "none";
             this.previewBox.innerHTML = "";
         }
         this.summaryBox.style.display = "none";
+        this.hideProgress();
         this.hideError();
     };
 
@@ -175,22 +226,33 @@
             this.fileNameInput.value = file.name;
         }
 
+        // Indeterminate spinner up front: reading, parsing and validation are all synchronous
+        // (SheetJS blocks the thread), so this is the only feedback until the preview streams in.
+        this.showSpinner(this.msg("parsing"));
+
         var reader = new FileReader();
         reader.onload = function (e) {
-            try {
-                var rows = self.parseFile(name, e.target.result);
-                if (!rows || !rows.length) {
-                    self.showError([self.msg("emptyFile")]);
+            // Defer the heavy synchronous work so the spinner painted above is actually visible
+            // before the thread blocks on parsing/validation.
+            self.deferHeavy(function () {
+                try {
+                    var rows = self.parseFile(name, e.target.result);
+                    if (!rows || !rows.length) {
+                        self.hideProgress();
+                        self.showError([self.msg("emptyFile")]);
+                        self.clearData();
+                        return;
+                    }
+                    self.process(rows, file);
+                } catch (err) {
+                    self.hideProgress();
+                    self.showError([self.msg("readError") + " " + (err && err.message ? err.message : "")]);
                     self.clearData();
-                    return;
                 }
-                self.process(rows, file);
-            } catch (err) {
-                self.showError([self.msg("readError") + " " + (err && err.message ? err.message : "")]);
-                self.clearData();
-            }
+            });
         };
         reader.onerror = function () {
+            self.hideProgress();
             self.showError([self.msg("readError")]);
             self.clearData();
         };
@@ -296,10 +358,10 @@
         if (missing.length) {
             errors.push(this.msg("missingHeaders", missing.join(", ")));
             this.showError(errors);
-            this.renderPreview(rows, {}, {});
             // Commit so the server also detects the missing headers (see commit() / process()).
             this.commit(rows);
             this.summary(0, rows.length);
+            this.renderPreview(rows, {}, {}, {}, function () { self.hideProgress(); });
             return;
         }
 
@@ -370,8 +432,6 @@
             }
         }
 
-        this.renderPreview(rows, badCells, rowDup, rowBad);
-
         // Always commit the parsed rows -- even when invalid -- so the data round-trips with the
         // submission. This keeps the file/preview from being lost on a validation reload and lets
         // the server-side selfValidate (which mirrors these checks) report the specific errors
@@ -390,6 +450,10 @@
             this.hideError();
             this.summary(rows.length, rows.length);
         }
+
+        // Render the preview last and asynchronously (chunked for large files) so the summary and
+        // any errors are visible immediately while thousands of rows stream into the table.
+        this.renderPreview(rows, badCells, rowDup, rowBad, function () { self.hideProgress(); });
     };
 
     /**
@@ -434,22 +498,33 @@
         }
     };
 
-    ExcelImport.prototype.renderPreview = function (rows, badCells, rowDup, rowBad) {
-        if (!this.previewBox) { return; } // preview hidden via config
+    /**
+     * Renders the preview table. Small tables render in a single pass; larger ones are built
+     * incrementally -- CHUNK rows per animation frame -- so parsing thousands of rows does not
+     * freeze the UI and a determinate progress bar can advance. `done` runs once the last chunk
+     * is in the DOM (or immediately when the preview is hidden via config).
+     */
+    ExcelImport.prototype.renderPreview = function (rows, badCells, rowDup, rowBad, done) {
+        if (!this.previewBox) { if (done) { done(); } return; } // preview hidden via config
         badCells = badCells || {};
         rowDup = rowDup || {};
         rowBad = rowBad || {};
         var self = this;
         var maxH = parseInt(this.config.previewHeight, 10) || 400;
+        var headers = this.previewHeaders;
+
+        // Supersede any preview render still streaming in from a previous file/parse.
+        if (this._renderToken) { this._renderToken.cancelled = true; }
+        var token = this._renderToken = { cancelled: false };
 
         var thead = "<tr><th class='excel-import-rownum'>#</th>" +
-            this.previewHeaders.map(function (h) { return "<th>" + escapeHtml(h) + "</th>"; }).join("") + "</tr>";
+            headers.map(function (h) { return "<th>" + escapeHtml(h) + "</th>"; }).join("") + "</tr>";
 
-        var tbody = rows.map(function (row, i) {
-            var cls = "";
-            if (rowBad[i]) { cls = "ei-row-bad"; }
-            else if (rowDup[i]) { cls = "ei-row-dup"; }
-            var tds = self.previewHeaders.map(function (h, idx) {
+        // Markup for a single data row.
+        function rowHtml(i) {
+            var row = rows[i];
+            var cls = rowBad[i] ? "ei-row-bad" : (rowDup[i] ? "ei-row-dup" : "");
+            var tds = headers.map(function (h, idx) {
                 var cellCls = (badCells[i] && badCells[i][h]) ? " class='ei-cell-bad'" : "";
                 var val = escapeHtml(self.cell(row, h));
                 var chip = "";
@@ -458,12 +533,48 @@
                 return "<td" + cellCls + ">" + val + chip + "</td>";
             }).join("");
             return "<tr class='" + cls + "'><td class='excel-import-rownum'>" + (i + 1) + "</td>" + tds + "</tr>";
-        }).join("");
+        }
 
         this.previewBox.style.display = "block";
+        var n = rows.length;
+        var CHUNK = 200;
+
+        // Small tables: one synchronous pass (no chunk/progress overhead or flicker).
+        if (n <= CHUNK) {
+            var all = "";
+            for (var i = 0; i < n; i++) { all += rowHtml(i); }
+            this.previewBox.innerHTML =
+                "<div class='ei-scroll' style='max-height:" + maxH + "px'>" +
+                "<table><thead>" + thead + "</thead><tbody>" + all + "</tbody></table></div>";
+            if (done) { done(); }
+            return;
+        }
+
+        // Large tables: build the shell, then append rows chunk-by-chunk across frames.
         this.previewBox.innerHTML =
             "<div class='ei-scroll' style='max-height:" + maxH + "px'>" +
-            "<table><thead>" + thead + "</thead><tbody>" + tbody + "</tbody></table></div>";
+            "<table><thead>" + thead + "</thead><tbody></tbody></table></div>";
+        var tbody = this.previewBox.querySelector("tbody");
+        var idx = 0;
+
+        function step() {
+            if (token.cancelled) { return; }
+            var end = Math.min(idx + CHUNK, n);
+            var html = "";
+            for (; idx < end; idx++) { html += rowHtml(idx); }
+            tbody.insertAdjacentHTML("beforeend", html);
+            if (idx < n) {
+                self.showProgressBar(self.msg("rendering", idx, n), idx, n);
+                if (window.requestAnimationFrame) { requestAnimationFrame(step); }
+                else { setTimeout(step, 0); }
+            } else if (done) {
+                done();
+            }
+        }
+
+        this.showProgressBar(this.msg("rendering", 0, n), 0, n);
+        if (window.requestAnimationFrame) { requestAnimationFrame(step); }
+        else { setTimeout(step, 0); }
     };
 
     ExcelImport.prototype.showError = function (errors) {

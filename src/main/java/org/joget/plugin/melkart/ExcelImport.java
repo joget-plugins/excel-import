@@ -255,6 +255,8 @@ public class ExcelImport extends Element implements FormBuilderPaletteElement, F
             messages.put("readError", customMsg("msgReadError", "ExcelImport.err.readError"));
             messages.put("fileTooLarge", customMsg("msgFileTooLarge", "ExcelImport.err.fileTooLarge"));
             messages.put("rowsValid", customMsg("msgRowsValid", "ExcelImport.info.rowsValid"));
+            messages.put("parsing", customMsg("msgParsing", "ExcelImport.info.parsing"));
+            messages.put("rendering", customMsg("msgRendering", "ExcelImport.info.rendering"));
             cfg.put("messages", messages);
         } catch (Exception e) {
             LogUtil.error(getClassName(), e, "Error building client config");
