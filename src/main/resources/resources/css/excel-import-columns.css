@@ -1,0 +1,299 @@
+/*
+ * Styles for the Excel Import "Colonnes / Mapping" custom property type (form builder only).
+ * Injected once by excel-import-columns.js (this file is not loaded on the runtime form).
+ * Prefixed .ei-cols- / .ei-modal- to avoid clashing with the Joget builder's own styles.
+ */
+
+/* ---- Widget table ---- */
+.ei-cols-widget {
+    width: 100%;
+    font-size: 13px;
+    color: #1f2937;
+}
+
+.ei-cols-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ei-cols-table thead th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    color: #475569;
+    background: #f8fafc;
+    padding: 8px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+
+.ei-cols-table thead th.ei-cols-flag {
+    width: 110px;
+}
+
+.ei-cols-table thead th.ei-cols-actions {
+    width: 132px;
+}
+
+.ei-cols-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.ei-cols-table tr.ei-cols-row:last-child td {
+    border-bottom: none;
+}
+
+.ei-cols-table input[type="text"],
+.ei-cols-table select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px 7px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+    color: #1f2937;
+}
+
+.ei-cols-table input[type="text"]:focus,
+.ei-cols-table input[type="number"]:focus,
+.ei-cols-table input[type="password"]:focus,
+.ei-cols-table select:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, .15);
+}
+
+.ei-cols-table input[readonly],
+.ei-modal-field input[readonly] {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
+}
+
+/* Required-cell validation highlight (mirrors the native grid). */
+.ei-cols-table td.cg-error input[type="text"],
+.ei-cols-table td.cg-error input[type="number"],
+.ei-cols-table td.cg-error select {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, .15);
+}
+
+.cg-required {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+/* ---- Checkbox cell ---- */
+.ei-cols-table td.ei-cols-flag {
+    text-align: center;
+}
+
+.cg-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    cursor: pointer;
+}
+
+.cg-check input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    accent-color: #4f46e5;
+    cursor: pointer;
+}
+
+.cg-check input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: .5;
+}
+
+.ei-modal-field .cg-check {
+    justify-content: flex-start;
+}
+
+/* ---- Row action buttons ---- */
+.ei-cols-table td.ei-cols-actions {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.ei-cols-table td.ei-cols-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 2px;
+    border-radius: 6px;
+    color: #64748b;
+    text-decoration: none;
+    transition: background-color .12s ease, color .12s ease;
+}
+
+.ei-cols-table td.ei-cols-actions a:hover {
+    background: #f1f5f9;
+    color: #4f46e5;
+}
+
+.ei-cols-table td.ei-cols-actions a.ei-cols-opts:hover {
+    background: #eef2ff;
+    color: #4338ca;
+}
+
+.ei-cols-table td.ei-cols-actions a.ei-cols-del:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* ---- Empty state + add link ---- */
+.ei-cols-empty {
+    padding: 14px 12px;
+    color: #94a3b8;
+    font-style: italic;
+    border: 1px dashed #e2e8f0;
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+a.ei-cols-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #4f46e5;
+    text-decoration: none;
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    background: #eef2ff;
+    transition: background-color .12s ease;
+}
+
+a.ei-cols-add:hover {
+    background: #e0e7ff;
+}
+
+/* ---- Options modal ---- */
+.ei-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, .5);
+    padding: 16px;
+}
+
+.ei-modal {
+    width: 100%;
+    max-width: 440px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, .3);
+    overflow: hidden;
+    animation: ei-modal-in .12s ease-out;
+}
+
+@keyframes ei-modal-in {
+    from { transform: translateY(6px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+}
+
+.ei-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.ei-modal-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.ei-modal-close {
+    font-size: 22px;
+    line-height: 1;
+    color: #94a3b8;
+    text-decoration: none;
+}
+
+.ei-modal-close:hover {
+    color: #475569;
+}
+
+.ei-modal-body {
+    padding: 16px 18px;
+}
+
+.ei-modal-field {
+    margin-bottom: 14px;
+}
+
+.ei-modal-field:last-child {
+    margin-bottom: 0;
+}
+
+.ei-modal-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.ei-modal-field input[type="text"],
+.ei-modal-field select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 9px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+    color: #1f2937;
+}
+
+.ei-modal-field input[type="text"]:focus,
+.ei-modal-field select:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, .15);
+}
+
+.ei-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 18px;
+    border-top: 1px solid #eef2f7;
+    background: #f8fafc;
+}
+
+a.ei-modal-done {
+    padding: 7px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    text-decoration: none;
+    background: #4f46e5;
+    border-radius: 6px;
+    transition: background-color .12s ease;
+}
+
+a.ei-modal-done:hover {
+    background: #4338ca;
+}

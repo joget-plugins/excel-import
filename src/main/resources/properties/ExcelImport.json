@@ -32,20 +32,36 @@
                 "name": "columns",
                 "label": "@@ExcelImport.columns@@",
                 "description": "@@ExcelImport.columnsDesc@@",
-                "type": "grid",
+                "type": "custom",
+                "script_url": "[CONTEXT_PATH]/plugin/org.joget.plugin.melkart.ExcelImport/js/excel-import-columns.js",
                 "columns": [
                     {
                         "key": "excelHeader",
                         "label": "@@ExcelImport.col.excelHeader@@",
-                        "required": "True"
+                        "type": "textfield",
+                        "required": "true"
                     },
                     {
                         "key": "fieldId",
-                        "label": "@@ExcelImport.col.fieldId@@"
+                        "label": "@@ExcelImport.col.fieldId@@",
+                        "type": "textfield",
+                        "readonly": "true"
+                    },
+                    {
+                        "key": "required",
+                        "label": "@@ExcelImport.col.required@@",
+                        "type": "checkbox"
+                    },
+                    {
+                        "key": "uniqueKey",
+                        "label": "@@ExcelImport.col.uniqueKey@@",
+                        "type": "checkbox"
                     },
                     {
                         "key": "type",
                         "label": "@@ExcelImport.col.type@@",
+                        "type": "select",
+                        "popup": "true",
                         "options": [
                             { "value": "", "label": "@@ExcelImport.col.type.text@@" },
                             { "value": "number", "label": "@@ExcelImport.col.type.number@@" },
@@ -54,38 +70,33 @@
                         ]
                     },
                     {
-                        "key": "required",
-                        "label": "@@ExcelImport.col.required@@",
-                        "options": [
-                            { "value": "", "label": "@@ExcelImport.no@@" },
-                            { "value": "true", "label": "@@ExcelImport.yes@@" }
-                        ]
-                    },
-                    {
-                        "key": "uniqueKey",
-                        "label": "@@ExcelImport.col.uniqueKey@@",
-                        "options": [
-                            { "value": "", "label": "@@ExcelImport.no@@" },
-                            { "value": "true", "label": "@@ExcelImport.yes@@" }
-                        ]
-                    },
-                    {
                         "key": "defaultValue",
-                        "label": "@@ExcelImport.col.defaultValue@@"
+                        "label": "@@ExcelImport.col.defaultValue@@",
+                        "type": "textfield",
+                        "popup": "true"
                     },
                     {
                         "key": "dateFormat",
-                        "label": "@@ExcelImport.col.dateFormat@@"
+                        "label": "@@ExcelImport.col.dateFormat@@",
+                        "type": "textfield",
+                        "popup": "true"
                     },
                     {
                         "key": "hideInPreview",
                         "label": "@@ExcelImport.col.hideInPreview@@",
-                        "options": [
-                            { "value": "", "label": "@@ExcelImport.no@@" },
-                            { "value": "true", "label": "@@ExcelImport.yes@@" }
-                        ]
+                        "type": "checkbox"
                     }
-                ]
+                ],
+                "labels": {
+                    "options": "@@ExcelImport.col.options@@",
+                    "optionsTitle": "@@ExcelImport.col.optionsTitle@@",
+                    "addRow": "@@ExcelImport.col.addRow@@",
+                    "done": "@@ExcelImport.col.done@@",
+                    "moveUp": "@@ExcelImport.col.moveUp@@",
+                    "moveDown": "@@ExcelImport.col.moveDown@@",
+                    "delete": "@@ExcelImport.col.delete@@",
+                    "noRows": "@@ExcelImport.col.noRows@@"
+                }
             },
             {
                 "name": "caseSensitiveHeaders",
