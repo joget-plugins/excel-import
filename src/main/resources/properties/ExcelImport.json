@@ -69,18 +69,18 @@
                         ]
                     },
                     {
-                        "key": "defaultValue",
-                        "label": "@@ExcelImport.col.defaultValue@@",
-                        "type": "textfield",
-                        "popup": "true"
-                    },
-                    {
                         "key": "dateFormat",
                         "label": "@@ExcelImport.col.dateFormat@@",
                         "type": "textfield",
                         "popup": "true",
                         "control_field": "type",
                         "control_value": "date"
+                    },
+                    {
+                        "key": "defaultValue",
+                        "label": "@@ExcelImport.col.defaultValue@@",
+                        "type": "textfield",
+                        "popup": "true"
                     },
                     {
                         "key": "hideInPreview",
