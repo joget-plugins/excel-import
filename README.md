@@ -60,6 +60,10 @@ anything is written.
   imported rows belong to the host submission.
 - **Replace strategies** — on re-submit, replace previous rows *by parent column* or *by unique
   key(s)* (upsert).
+- **Large-file friendly** — a spinner covers reading/parsing/validation, and the preview table is
+  rendered incrementally (chunked across animation frames) behind a progress bar, so importing
+  thousands of rows never freezes the browser. The validation summary and errors appear as soon as
+  the checks finish, while the table streams in.
 - **Edit-friendly** — on edit, the preview is rebuilt from the stored child records; an unchanged
   re-submit is a no-op.
 - **Optional host-record suppression** — use a form purely as an import trigger without storing
@@ -245,7 +249,8 @@ default from the resource bundle when left blank:
 
 `msgRequired`, `msgInvalidData`, `msgMissingHeaders`, `msgRequiredCell`, `msgDuplicate`,
 `msgExistingDuplicate`, `msgPattern`, `msgRange`, `msgNotAllowed`, `msgEmptyFile`, `msgReadError`,
-`msgFileTooLarge`, `msgRowsValid`.
+`msgFileTooLarge`, `msgRowsValid`, `msgParsing` (spinner label while reading/parsing),
+`msgRendering` (progress label while the preview streams in; `{0}` rendered rows, `{1}` total).
 
 Messages support positional placeholders (`{0}`, `{1}`) — e.g. the missing-columns list, the
 offending column/rows, or the valid/total row counts.
