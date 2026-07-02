@@ -31,6 +31,8 @@
         this.uniqueColumns = this.config.uniqueColumns || [];
         // Per-header cleansing rules: { type, defaultValue, dateFormat }.
         this.coercion = this.config.coercion || {};
+        // Per-header value rules: { type, pattern, min, max, allowed:[...] }.
+        this.validation = this.config.validation || {};
         this.caseSensitive = !!this.config.caseSensitive;
         this.messages = this.config.messages || {};
         this.container = document.getElementById(this.config.containerId);
@@ -322,6 +324,30 @@
             }
         });
 
+        // 2b. Per-column value rules: allowed values, min/max range, and regex pattern. Only
+        // non-empty cells are checked (emptiness is governed by the required-cell check above),
+        // mirroring ExcelImport.validateCell server-side.
+        this.headers.forEach(function (header) {
+            var rule = self.validation[header];
+            if (!rule) { return; }
+            var allowedBad = [], rangeBad = [], patternBad = [];
+            rows.forEach(function (row, i) {
+                var v = self.cell(row, header);
+                if (!v || !v.trim()) { return; }
+                var err = validateValue(v, rule, self.caseSensitive);
+                if (!err) { return; }
+                badCells[i] = badCells[i] || {};
+                badCells[i][header] = true;
+                rowBad[i] = true;
+                if (err === "allowed") { allowedBad.push(i + 1); }
+                else if (err === "range") { rangeBad.push(i + 1); }
+                else if (err === "pattern") { patternBad.push(i + 1); }
+            });
+            if (allowedBad.length) { errors.push(self.msg("notAllowed", header, allowedBad.join(", "))); }
+            if (rangeBad.length) { errors.push(self.msg("range", header, rangeBad.join(", "))); }
+            if (patternBad.length) { errors.push(self.msg("pattern", header, patternBad.join(", "))); }
+        });
+
         // 3. Composite duplicate key across the flagged columns (within file).
         if (this.uniqueColumns.length) {
             var seen = {};
@@ -548,6 +574,68 @@
         var s = String(n);
         while (s.length < width) { s = "0" + s; }
         return s;
+    }
+
+    //
+    // ---- Per-column value validation (mirrors ExcelImport.validateCell on the server) ----
+    //
+    // Runs after coercion on the already-cleansed value. Best-effort like coercion: a value that
+    // cannot be parsed for a min/max comparison is not flagged (use a regex pattern to enforce a
+    // strict format). Checked in order: allowed values, min/max range, regex pattern.
+
+    /** @return the failing rule ("allowed"/"range"/"pattern"), or null when the value passes. */
+    function validateValue(v, rule, caseSensitive) {
+        var s = String(v).trim();
+        if (rule.allowed && rule.allowed.length) {
+            var ok = rule.allowed.some(function (a) {
+                return caseSensitive ? (String(a) === s) : (String(a).toLowerCase() === s.toLowerCase());
+            });
+            if (!ok) { return "allowed"; }
+        }
+        if ((rule.min != null && rule.min !== "") || (rule.max != null && rule.max !== "")) {
+            if (outOfRange(s, rule)) { return "range"; }
+        }
+        if (rule.pattern) {
+            try {
+                if (!new RegExp(rule.pattern).test(s)) { return "pattern"; }
+            } catch (e) { /* invalid configured regex: skip */ }
+        }
+        return null;
+    }
+
+    /** Range check for number/date typed columns; returns false (passes) for any other type. */
+    function outOfRange(s, rule) {
+        var type = (rule.type || "").toLowerCase();
+        var val, min, max;
+        if (type === "date") {
+            val = dateToMillis(s);
+            if (val == null) { return false; }
+            min = (rule.min != null && rule.min !== "") ? dateToMillis(rule.min) : null;
+            max = (rule.max != null && rule.max !== "") ? dateToMillis(rule.max) : null;
+        } else if (type === "number") {
+            val = toNumber(s);
+            if (val == null) { return false; }
+            min = (rule.min != null && rule.min !== "") ? toNumber(rule.min) : null;
+            max = (rule.max != null && rule.max !== "") ? toNumber(rule.max) : null;
+        } else {
+            return false;
+        }
+        if (min != null && val < min) { return true; }
+        if (max != null && val > max) { return true; }
+        return false;
+    }
+
+    /** Parse a (possibly grouped/European) number string to a Number, or null when unparseable. */
+    function toNumber(v) {
+        var n = Number(coerceNumber(String(v)));
+        return isNaN(n) ? null : n;
+    }
+
+    /** Parse an Excel serial / ISO / day-first date to a comparable UTC millisecond value, or null. */
+    function dateToMillis(v) {
+        var p = parseDateParts(v);
+        if (!p) { return null; }
+        return Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi, p.s);
     }
 
     function escapeHtml(s) {

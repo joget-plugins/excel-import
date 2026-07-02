@@ -46,9 +46,12 @@ column-grid assets. Parsed rows round-trip to the server as a JSON array in a hi
 ## Non-obvious invariants (get these wrong and it breaks silently)
 
 - **Two-sided validation must match.** The same checks (required headers, required cells,
-  composite unique key) run in `excel-import-lib.js` and again in `ExcelImport.selfValidate()`.
-  Coercion runs *before* validation on both sides. Change one side → change the other, or the
-  browser and server will disagree.
+  per-column value rules — allowed values / min-max range / regex pattern, composite unique key)
+  run in `excel-import-lib.js` and again in `ExcelImport.selfValidate()`. Coercion runs *before*
+  validation on both sides, and the per-column value rules only fire on non-empty cells. The
+  per-cell logic (`validateValue` in JS ↔ `ExcelImport.validateCell`) and its number/date parsing
+  must stay behaviorally identical — note the regex uses partial-match semantics (`RegExp.test`
+  ↔ `Matcher.find()`). Change one side → change the other, or the browser and server disagree.
 - **Binder instance caching.** Joget keys the `formatData()` row set by the exact binder
   instance returned from `getStoreBinder()`, then looks it up again to call `store()`. The
   element must return a **cached** binder instance, not a fresh one each call.
