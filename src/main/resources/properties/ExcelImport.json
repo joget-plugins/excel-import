@@ -44,8 +44,7 @@
                     {
                         "key": "fieldId",
                         "label": "@@ExcelImport.col.fieldId@@",
-                        "type": "textfield",
-                        "readonly": "true"
+                        "type": "textfield"
                     },
                     {
                         "key": "required",
@@ -79,7 +78,9 @@
                         "key": "dateFormat",
                         "label": "@@ExcelImport.col.dateFormat@@",
                         "type": "textfield",
-                        "popup": "true"
+                        "popup": "true",
+                        "control_field": "type",
+                        "control_value": "date"
                     },
                     {
                         "key": "hideInPreview",

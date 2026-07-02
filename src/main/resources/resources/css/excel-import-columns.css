@@ -90,6 +90,17 @@
     font-weight: 700;
 }
 
+/* Dependent cell hidden by its controlling column: keep the <td> for column alignment,
+   hide its control, and show a muted placeholder so the row stays readable. */
+.ei-cols-table td.ei-cols-dep-hidden > * {
+    display: none;
+}
+
+.ei-cols-table td.ei-cols-dep-hidden::after {
+    content: "\2014";        /* em dash */
+    color: #cbd5e1;
+}
+
 /* ---- Checkbox cell ---- */
 .ei-cols-table td.ei-cols-flag {
     text-align: center;

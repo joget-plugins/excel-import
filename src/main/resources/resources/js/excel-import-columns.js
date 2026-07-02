@@ -36,6 +36,16 @@
  * checkbox/truefalse, autocomplete. A column with `options`/`options_ajax` and no explicit type
  * is treated as a select.
  *
+ * DEPENDENT COLUMNS (Joget's dependency-field attribute syntax, evaluated per row against a
+ * sibling column in the SAME row):
+ *   control_field     : key of another column in the row that controls this one's visibility.
+ *   control_value     : value (or regex) the controlling cell must match for this column to show.
+ *   control_use_regex : "true" to match control_value as a regex; otherwise exact-equality.
+ * A column hidden by a non-matching control is removed from the row (its value is cleared on
+ * save and its "required" flag is skipped), mirroring Joget's native dependent-field behaviour.
+ * Works for inline cells and popup fields, including a popup field controlled by an inline cell
+ * (or vice-versa).
+ *
  * Scope available on `this`: id, value, properties (incl. properties.columns / .labels),
  * options.contextPath, properties.appPath. Globals: jQuery, jQuery UI (autocomplete),
  * PropertyEditor.Util (escapeHtmlTag, replaceContextPath).
@@ -109,6 +119,25 @@
     _trueVal: function (col) { return col.true_value !== undefined ? col.true_value : "true"; },
     _falseVal: function (col) { return col.false_value !== undefined ? col.false_value : ""; },
 
+    /* True when `col` has no controlling field, or the controlling cell's value matches. */
+    _matchesControl: function (col, controllingValue) {
+        var cf = col.control_field;
+        if (cf === undefined || cf === null || cf === "") { return true; }
+        var target = (col.control_value === undefined || col.control_value === null) ? "" : String(col.control_value);
+        var val = (controllingValue === undefined || controllingValue === null) ? "" : String(controllingValue);
+        if (String(col.control_use_regex) === "true") {
+            try { return new RegExp(target).test(val); } catch (e) { return true; }
+        }
+        return val === target;
+    },
+
+    /* Reads every column's current value from a row's <tr> (inline controls + popup hidden inputs). */
+    _rowObj: function ($tr) {
+        var self = this, obj = {};
+        $.each(this._cols(), function (i, col) { obj[col.key] = self._readCell($tr, col); });
+        return obj;
+    },
+
     /* Tolerant read of the stored value (native array, or JSON string as insurance). */
     _rows: function () {
         var v = this.value;
@@ -175,8 +204,9 @@
         var inline = this._inlineCols(), popup = this._popupCols();
         var html = '<tr class="ei-cols-row">';
         $.each(inline, function (i, col) {
-            var cls = (self._type(col) === "checkbox") ? ' class="ei-cols-flag"' : '';
-            html += '<td' + cls + ' data-th="' + esc(col.label || col.key) + '">'
+            var cls = (self._type(col) === "checkbox") ? ' ei-cols-flag' : '';
+            html += '<td class="ei-cols-cell' + cls + '" data-col="' + esc(col.key)
+                + '" data-th="' + esc(col.label || col.key) + '">'
                 + self.renderControl(col, row[col.key]) + '</td>';
         });
         // Popup columns ride along as hidden inputs so getData reads every column uniformly.
@@ -230,6 +260,10 @@
             $('#' + this.id + ' tbody tr.ei-cols-row').each(function () {
                 var $tr = $(this), obj = {};
                 $.each(cols, function (i, col) { obj[col.key] = self._readCell($tr, col); });
+                // A column hidden by its controlling field is ignored on save (Joget behaviour).
+                $.each(cols, function (i, col) {
+                    if (col.control_field && !self._matchesControl(col, obj[col.control_field])) { obj[col.key] = ""; }
+                });
                 arr.push(obj);
             });
             if (arr.length === 0 && useDefault && this.defaultValue !== null && this.defaultValue !== undefined) {
@@ -253,7 +287,8 @@
             var inline = this._inlineCols();
             $.each(value, function (i, row) {
                 $.each(inline, function (j, col) {
-                    if (String(col.required) === "true") {
+                    if (String(col.required) === "true"
+                            && self._matchesControl(col, row[col.control_field])) {
                         var v = row[col.key];
                         if (v === undefined || v === null || v === "") {
                             table.find('tr.ei-cols-row:eq(' + i + ') td:eq(' + j + ')').addClass('cg-error');
@@ -285,6 +320,7 @@
             var $row = $(self.renderRow({}));
             $('#' + self.id + ' tbody').append($row);
             self._initFieldSources($row);
+            self._applyRowDeps($row);
             refreshEmpty();
             change();
         });
@@ -308,7 +344,11 @@
             if ($next.length) { $tr.insertAfter($next); change(); }
         });
 
-        $widget.on("change.eicols", "input, select", function () { change(); });
+        $widget.on("change.eicols", "input, select", function () {
+            var $tr = $(this).closest("tr.ei-cols-row");
+            if ($tr.length) { self._applyRowDeps($tr); }
+            change();
+        });
 
         $widget.on("click.eicols", ".ei-cols-opts", function (e) {
             e.preventDefault();
@@ -316,6 +356,7 @@
         });
 
         this._initFieldSources($widget);
+        $('#' + this.id + ' tbody tr.ei-cols-row').each(function () { self._applyRowDeps($(this)); });
     },
 
     /* Wires up options_ajax selects and (static or ajax) autocomplete inputs within a scope. */
@@ -366,6 +407,32 @@
         return p;
     },
 
+    /* Shows/hides inline dependent cells in a row based on their controlling sibling cell. */
+    _applyRowDeps: function ($tr) {
+        var self = this, obj = this._rowObj($tr);
+        $.each(this._inlineCols(), function (i, col) {
+            if (col.control_field) {
+                var vis = self._matchesControl(col, obj[col.control_field]);
+                $tr.find('td.ei-cols-cell[data-col="' + col.key + '"]').toggleClass("ei-cols-dep-hidden", !vis);
+            }
+        });
+    },
+
+    /* Shows/hides popup dependent fields in an open modal. Controlling values come from the modal
+       for popup columns and from the row's <tr> for inline columns (cross-scope dependencies). */
+    _applyModalDeps: function ($modal, $tr) {
+        var self = this, obj = {};
+        $.each(this._cols(), function (i, col) {
+            obj[col.key] = self._readCell(String(col.popup) === "true" ? $modal : $tr, col);
+        });
+        $.each(this._popupCols(), function (i, col) {
+            if (col.control_field) {
+                $modal.find('.ei-modal-field[data-col="' + col.key + '"]')
+                    .toggle(self._matchesControl(col, obj[col.control_field]));
+            }
+        });
+    },
+
     openOptions: function ($tr) {
         var self = this, esc = this._esc, L = this._lbl();
         var popup = this._popupCols();
@@ -374,7 +441,7 @@
         var body = '';
         $.each(popup, function (i, col) {
             var cur = $tr.find('[name="' + col.key + '"]').val() || "";
-            body += '<div class="ei-modal-field"><label>' + self._labelHtml(col) + '</label>'
+            body += '<div class="ei-modal-field" data-col="' + esc(col.key) + '"><label>' + self._labelHtml(col) + '</label>'
                 + self.renderControl(col, cur) + '</div>';
         });
 
@@ -394,16 +461,19 @@
         $overlay.append($modal);
         $('body').append($overlay);
         this._initFieldSources($modal);
+        this._applyModalDeps($modal, $tr);
 
         var close = function () { $(document).off("keydown.eimodal"); $overlay.remove(); };
         var commit = function () {
             $.each(popup, function (i, col) {
                 $tr.find('[name="' + col.key + '"]').val(self._readCell($modal, col));
             });
+            self._applyRowDeps($tr);      // a popup control may drive an inline dependent
             $('#' + self.id).trigger("change");
             close();
         };
 
+        $modal.on("change", "input, select", function () { self._applyModalDeps($modal, $tr); });
         $overlay.on("click", function (e) { if (e.target === $overlay[0]) { close(); } });
         $modal.find(".ei-modal-close").on("click", function (e) { e.preventDefault(); close(); });
         $modal.find(".ei-modal-done").on("click", function (e) { e.preventDefault(); commit(); });
