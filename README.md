@@ -161,6 +161,7 @@ To uninstall, remove the bundle from **Manage Plugins**.
    - **Type** — optional coercion: *Text* (default), *Number*, *Date*, or *Boolean*.
    - **Required / Unique key / Hide from preview** — per-column flags.
    - **Default value / Date format** — optional cleansing applied before validation and storage.
+     The **Date format** field only appears when **Type = Date**.
 4. Configure the **Data storage** tab (target, parent link, replace strategy).
 5. Save. At runtime, users drop a file, see a validated preview, and on submit each row is
    stored as a record in the target.

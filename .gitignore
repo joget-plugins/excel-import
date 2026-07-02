@@ -4,3 +4,4 @@ target/
 .settings/
 *.log
 .DS_Store
+FEATURE_IDEAS.md
